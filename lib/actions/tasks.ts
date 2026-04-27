@@ -10,6 +10,7 @@ import type {
   Task,
   TaskPriority,
   TaskStatus,
+  Assignee,
 } from "@/lib/types";
 
 async function requireUser() {
@@ -21,6 +22,7 @@ export interface TaskPatch {
   description?: string | null;
   status?: TaskStatus;
   priority?: TaskPriority | null;
+  assignee?: Assignee | null;
   due_date?: string | null;
   position?: number;
 }
@@ -31,6 +33,7 @@ function patchToColumns(p: TaskPatch) {
   if (p.description !== undefined) out.description = p.description;
   if (p.status !== undefined) out.status = p.status;
   if (p.priority !== undefined) out.priority = p.priority;
+  if (p.assignee !== undefined) out.assignee = p.assignee;
   if (p.due_date !== undefined) out.dueDate = p.due_date;
   if (p.position !== undefined) out.position = p.position;
   return out;
@@ -41,6 +44,7 @@ export async function createTask(input: {
   description?: string | null;
   status: TaskStatus;
   priority?: TaskPriority | null;
+  assignee?: Assignee | null;
   due_date?: string | null;
   position?: number;
 }): Promise<Task> {
@@ -64,6 +68,7 @@ export async function createTask(input: {
       description: input.description ?? null,
       status: input.status,
       priority: input.priority ?? "medium",
+      assignee: input.assignee ?? null,
       dueDate: input.due_date ?? null,
       position,
     })

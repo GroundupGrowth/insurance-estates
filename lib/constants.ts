@@ -1,6 +1,7 @@
 import type {
   TaskStatus,
   TaskPriority,
+  Assignee,
   SocialPlatform,
   SocialStatus,
   IdeaStatus,
@@ -24,6 +25,22 @@ export const PRIORITY_COLOR: Record<TaskPriority, string> = {
   low: "#C8C6BF",
   medium: "#D8A24A",
   high: "#C84B6E",
+};
+
+export const ASSIGNEE_OPTIONS: { value: Assignee; label: string }[] = [
+  { value: "Dylan", label: "Dylan" },
+  { value: "Xander", label: "Xander" },
+  { value: "Emson", label: "Emson" },
+  { value: "Team", label: "Team" },
+  { value: "Erik", label: "Erik" },
+];
+
+export const ASSIGNEE_COLOR: Record<Assignee, string> = {
+  Dylan: "#2E5A87",
+  Xander: "#3F6E3A",
+  Emson: "#7A5A1F",
+  Team: "#3D3A33",
+  Erik: "#A8345C",
 };
 
 export const PLATFORMS: { value: SocialPlatform; label: string; charLimit: number }[] = [

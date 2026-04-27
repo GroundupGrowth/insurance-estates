@@ -20,8 +20,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TASK_COLUMNS, PRIORITY_OPTIONS } from "@/lib/constants";
-import type { Task, TaskPriority, TaskStatus } from "@/lib/types";
+import { TASK_COLUMNS, PRIORITY_OPTIONS, ASSIGNEE_OPTIONS } from "@/lib/constants";
+import type { Task, TaskPriority, TaskStatus, Assignee } from "@/lib/types";
+
+const UNASSIGNED = "__unassigned__";
 
 interface TaskDialogProps {
   open: boolean;
@@ -38,6 +40,7 @@ export function TaskDialog({ open, onOpenChange, task, onSave, onDelete }: TaskD
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<TaskStatus>("todo");
   const [priority, setPriority] = useState<TaskPriority>("medium");
+  const [assignee, setAssignee] = useState<Assignee | null>(null);
   const [dueDate, setDueDate] = useState<string>("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -48,6 +51,7 @@ export function TaskDialog({ open, onOpenChange, task, onSave, onDelete }: TaskD
       setDescription(task.description ?? "");
       setStatus((task.status as TaskStatus) ?? "todo");
       setPriority((task.priority as TaskPriority) ?? "medium");
+      setAssignee((task.assignee as Assignee | null) ?? null);
       setDueDate(task.due_date ?? "");
       setConfirmDelete(false);
       setCreating(false);
@@ -69,6 +73,7 @@ export function TaskDialog({ open, onOpenChange, task, onSave, onDelete }: TaskD
         description: description || null,
         status,
         priority,
+        assignee,
         due_date: dueDate || null,
       });
       onOpenChange(false);
@@ -171,19 +176,44 @@ export function TaskDialog({ open, onOpenChange, task, onSave, onDelete }: TaskD
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="task-due">Due date</Label>
-            <Input
-              id="task-due"
-              type="date"
-              value={dueDate ?? ""}
-              onChange={(e) => setDueDate(e.target.value)}
-              onBlur={() =>
-                !isNew &&
-                (dueDate || null) !== (task?.due_date ?? null) &&
-                flush({ due_date: dueDate || null })
-              }
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Assignee</Label>
+              <Select
+                value={assignee ?? UNASSIGNED}
+                onValueChange={(v) => {
+                  const next = v === UNASSIGNED ? null : (v as Assignee);
+                  setAssignee(next);
+                  flush({ assignee: next });
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                  {ASSIGNEE_OPTIONS.map((a) => (
+                    <SelectItem key={a.value} value={a.value}>
+                      {a.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="task-due">Due date</Label>
+              <Input
+                id="task-due"
+                type="date"
+                value={dueDate ?? ""}
+                onChange={(e) => setDueDate(e.target.value)}
+                onBlur={() =>
+                  !isNew &&
+                  (dueDate || null) !== (task?.due_date ?? null) &&
+                  flush({ due_date: dueDate || null })
+                }
+              />
+            </div>
           </div>
         </div>
 

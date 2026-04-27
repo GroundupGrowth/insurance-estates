@@ -59,6 +59,7 @@ export const tasks = pgTable(
     description: text("description"),
     status: taskStatusEnum("status").notNull(),
     priority: taskPriorityEnum("priority").default("medium"),
+    assignee: text("assignee"),
     dueDate: date("due_date"),
     position: integer("position").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),

@@ -57,11 +57,15 @@ CREATE TABLE IF NOT EXISTS "tasks" (
   "description" text,
   "status"      "task_status" NOT NULL,
   "priority"    "task_priority" DEFAULT 'medium',
+  "assignee"    text,
   "due_date"    date,
   "position"    integer DEFAULT 0 NOT NULL,
   "created_at"  timestamp with time zone DEFAULT now(),
   "updated_at"  timestamp with time zone DEFAULT now()
 );
+
+-- Columns added after initial setup (safe to re-run).
+ALTER TABLE "tasks" ADD COLUMN IF NOT EXISTS "assignee" text;
 
 -- Foreign keys -------------------------------------------------
 DO $$ BEGIN

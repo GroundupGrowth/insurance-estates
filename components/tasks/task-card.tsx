@@ -4,6 +4,7 @@ import { format, parseISO } from "date-fns";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Task } from "@/lib/types";
+import { ASSIGNEE_COLOR } from "@/lib/constants";
 import { PriorityDot } from "./priority-dot";
 import { cn } from "@/lib/utils";
 
@@ -48,10 +49,23 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
       {task.description && (
         <p className="mt-1.5 text-xs text-app-muted line-clamp-1">{task.description}</p>
       )}
-      {task.due_date && (
-        <p className="mt-3 text-[11px] text-app-muted">
-          {format(parseISO(task.due_date), "MMM d")}
-        </p>
+      {(task.due_date || task.assignee) && (
+        <div className="mt-3 flex items-center justify-between gap-2 text-[11px] text-app-muted">
+          {task.due_date ? (
+            <span>{format(parseISO(task.due_date), "MMM d")}</span>
+          ) : (
+            <span />
+          )}
+          {task.assignee && (
+            <span
+              className="inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold text-white"
+              style={{ backgroundColor: ASSIGNEE_COLOR[task.assignee] }}
+              title={task.assignee}
+            >
+              {task.assignee === "Team" ? "TM" : task.assignee[0]}
+            </span>
+          )}
+        </div>
       )}
     </div>
   );
