@@ -185,9 +185,11 @@ export function TasksBoard({ initialTasks, initialFilter }: BoardProps) {
     }
 
     const affected: Task[] = [];
+    const origById = new Map(tasks.map((t) => [t.id, t]));
     const reassign = (status: TaskStatus) => {
       nextGroups[status] = nextGroups[status].map((t, i) => {
-        if (t.position !== i || t.status !== status) {
+        const orig = origById.get(t.id);
+        if (!orig || orig.position !== i || orig.status !== status) {
           const updated = { ...t, position: i, status };
           affected.push(updated);
           return updated;
