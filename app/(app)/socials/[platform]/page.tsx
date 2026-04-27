@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { eq, asc } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { socialPosts } from "@/lib/db/schema";
+import { serializeSocialPost } from "@/lib/db/serializers";
 import { SocialsView } from "@/components/socials/socials-view";
 import { PLATFORMS } from "@/lib/constants";
-import type { SocialPlatform, SocialPost } from "@/lib/supabase/types";
+import type { SocialPlatform } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -14,17 +17,16 @@ export default async function SocialsPlatformPage({
   const { platform } = await params;
   if (!PLATFORMS.some((p) => p.value === platform)) notFound();
 
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("social_posts")
-    .select("*")
-    .eq("platform", platform)
-    .order("scheduled_for", { ascending: true, nullsFirst: false });
+  const rows = await db
+    .select()
+    .from(socialPosts)
+    .where(eq(socialPosts.platform, platform as SocialPlatform))
+    .orderBy(asc(socialPosts.scheduledFor));
 
   return (
     <SocialsView
       platform={platform as SocialPlatform}
-      initialPosts={(data ?? []) as SocialPost[]}
+      initialPosts={rows.map(serializeSocialPost)}
     />
   );
 }

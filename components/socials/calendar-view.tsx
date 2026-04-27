@@ -17,7 +17,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SOCIAL_STATUS_TINT } from "@/lib/constants";
-import type { SocialPost } from "@/lib/supabase/types";
+import type { SocialPost } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface CalendarViewProps {

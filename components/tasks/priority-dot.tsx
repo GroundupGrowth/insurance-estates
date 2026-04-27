@@ -1,5 +1,5 @@
 import { PRIORITY_COLOR } from "@/lib/constants";
-import type { TaskPriority } from "@/lib/supabase/types";
+import type { TaskPriority } from "@/lib/types";
 
 export function PriorityDot({ priority }: { priority: TaskPriority | null | undefined }) {
   const color = PRIORITY_COLOR[priority ?? "medium"];

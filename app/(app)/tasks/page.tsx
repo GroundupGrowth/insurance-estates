@@ -1,6 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
+import { asc } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { tasks } from "@/lib/db/schema";
+import { serializeTask } from "@/lib/db/serializers";
 import { TasksBoard } from "@/components/tasks/tasks-board";
-import type { Task } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
 
@@ -9,14 +11,11 @@ export default async function TasksPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("tasks")
-    .select("*")
-    .order("status")
-    .order("position", { ascending: true });
-
-  const initialTasks = (data ?? []) as Task[];
+  const rows = await db
+    .select()
+    .from(tasks)
+    .orderBy(asc(tasks.status), asc(tasks.position));
+  const initialTasks = rows.map(serializeTask);
   const params = await searchParams;
   return <TasksBoard initialTasks={initialTasks} initialFilter={params.status ?? null} />;
 }

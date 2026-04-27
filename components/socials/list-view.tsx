@@ -3,7 +3,7 @@
 import { format, parseISO, startOfWeek } from "date-fns";
 import { useMemo } from "react";
 import { SOCIAL_STATUS_TINT } from "@/lib/constants";
-import type { SocialPost } from "@/lib/supabase/types";
+import type { SocialPost } from "@/lib/types";
 import { Empty } from "@/components/ui/empty";
 
 interface ListViewProps {

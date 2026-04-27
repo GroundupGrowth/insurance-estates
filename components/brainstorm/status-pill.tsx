@@ -1,5 +1,5 @@
 import { IDEA_STATUS_TINT } from "@/lib/constants";
-import type { IdeaStatus } from "@/lib/supabase/types";
+import type { IdeaStatus } from "@/lib/types";
 
 export function IdeaStatusPill({ status }: { status: IdeaStatus | null }) {
   const s = status ?? "raw";

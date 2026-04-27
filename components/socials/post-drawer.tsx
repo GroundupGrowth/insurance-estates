@@ -25,7 +25,7 @@ import type {
   SocialPlatform,
   SocialPost,
   SocialStatus,
-} from "@/lib/supabase/types";
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface PostDrawerProps {

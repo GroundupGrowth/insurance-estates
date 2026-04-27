@@ -1,36 +1,34 @@
 import { startOfWeek, endOfWeek } from "date-fns";
-import { createClient } from "@/lib/supabase/server";
+import { gte, lte, and } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { tasks } from "@/lib/db/schema";
+import { serializeTask } from "@/lib/db/serializers";
 import { TodayCard } from "@/components/dashboard/today-card";
 import { ProgressDonut } from "@/components/dashboard/progress-donut";
 import { StatusPills } from "@/components/dashboard/status-pills";
 import { getGreeting } from "@/lib/utils";
-import type { Task } from "@/lib/supabase/types";
 import { Card } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-
   const today = new Date();
   const todayIso = today.toISOString().slice(0, 10);
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
 
-  const [{ data: allTasks }, { data: weekTasks }] = await Promise.all([
-    supabase.from("tasks").select("*"),
-    supabase
-      .from("tasks")
-      .select("*")
-      .gte("updated_at", weekStart.toISOString())
-      .lte("updated_at", weekEnd.toISOString()),
+  const [allRows, weekRows] = await Promise.all([
+    db.select().from(tasks),
+    db
+      .select()
+      .from(tasks)
+      .where(and(gte(tasks.updatedAt, weekStart), lte(tasks.updatedAt, weekEnd))),
   ]);
 
-  const tasks = (allTasks ?? []) as Task[];
-  const week = (weekTasks ?? []) as Task[];
+  const allTasks = allRows.map(serializeTask);
+  const week = weekRows.map(serializeTask);
 
-  // Today list: due today OR (todo|in_progress AND priority=high), max 8
-  const todayList = tasks
+  const todayList = allTasks
     .filter(
       (t) =>
         t.status !== "done" &&
@@ -50,13 +48,11 @@ export default async function DashboardPage() {
   const pct = weekTotal === 0 ? 0 : Math.round((weekDone / weekTotal) * 100);
 
   const counts = {
-    open: tasks.filter((t) =>
-      ["backlog", "todo"].includes(t.status),
-    ).length,
-    inProgress: tasks.filter((t) =>
+    open: allTasks.filter((t) => ["backlog", "todo"].includes(t.status)).length,
+    inProgress: allTasks.filter((t) =>
       ["in_progress", "review"].includes(t.status),
     ).length,
-    completed: tasks.filter((t) => t.status === "done").length,
+    completed: allTasks.filter((t) => t.status === "done").length,
   };
 
   return (

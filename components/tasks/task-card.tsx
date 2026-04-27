@@ -3,7 +3,7 @@
 import { format, parseISO } from "date-fns";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { Task } from "@/lib/supabase/types";
+import type { Task } from "@/lib/types";
 import { PriorityDot } from "./priority-dot";
 import { cn } from "@/lib/utils";
 

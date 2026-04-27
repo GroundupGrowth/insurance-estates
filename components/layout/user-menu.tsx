@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Settings, LogOut } from "lucide-react";
+import { useUser } from "@stackframe/stack";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +12,18 @@ import {
 import { initialFromEmail } from "@/lib/utils";
 
 export function UserMenu({ email }: { email: string | null }) {
+  const user = useUser();
+  const [signingOut, setSigningOut] = useState(false);
+
+  const onSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await user?.signOut();
+    } finally {
+      setSigningOut(false);
+    }
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -24,14 +38,17 @@ export function UserMenu({ email }: { email: string | null }) {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" side="top" className="w-48">
-        <form action="/api/auth/sign-out" method="post">
-          <DropdownMenuItem asChild>
-            <button type="submit" className="w-full flex items-center gap-2">
-              <LogOut size={14} strokeWidth={1.75} />
-              Sign out
-            </button>
-          </DropdownMenuItem>
-        </form>
+        <DropdownMenuItem
+          onSelect={(e) => {
+            e.preventDefault();
+            void onSignOut();
+          }}
+          disabled={signingOut}
+          className="gap-2"
+        >
+          <LogOut size={14} strokeWidth={1.75} />
+          {signingOut ? "Signing out…" : "Sign out"}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

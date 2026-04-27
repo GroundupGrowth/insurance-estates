@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TASK_COLUMNS, PRIORITY_OPTIONS } from "@/lib/constants";
-import type { Task, TaskPriority, TaskStatus } from "@/lib/supabase/types";
+import type { Task, TaskPriority, TaskStatus } from "@/lib/types";
 
 interface TaskDrawerProps {
   open: boolean;

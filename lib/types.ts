@@ -51,7 +51,3 @@ export interface IdeaLink {
   label: string | null;
   created_at: string;
 }
-
-export interface AllowedEmail {
-  email: string;
-}

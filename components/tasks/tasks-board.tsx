@@ -15,8 +15,13 @@ import {
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import { TASK_COLUMNS } from "@/lib/constants";
-import type { Task, TaskStatus } from "@/lib/supabase/types";
-import { createClient } from "@/lib/supabase/client";
+import type { Task, TaskStatus } from "@/lib/types";
+import {
+  createTask,
+  updateTask,
+  deleteTask as deleteTaskAction,
+  reorderTasks,
+} from "@/lib/actions/tasks";
 import { TaskColumn } from "./task-column";
 import { TaskDrawer } from "./task-drawer";
 import { TaskCard } from "./task-card";
@@ -38,13 +43,11 @@ export function TasksBoard({ initialTasks, initialFilter }: BoardProps) {
   const [openTask, setOpenTask] = useState<Partial<Task> | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const supabase = useMemo(() => createClient(), []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
 
-  // Group tasks by status, ordered by position
   const grouped = useMemo(() => {
     const map: Record<TaskStatus, Task[]> = {
       backlog: [],
@@ -58,7 +61,6 @@ export function TasksBoard({ initialTasks, initialFilter }: BoardProps) {
     return map;
   }, [tasks]);
 
-  // Highlight initial filter (link from dashboard pills)
   useEffect(() => {
     if (initialFilter) {
       const el = document.getElementById(`column-${initialFilter}`);
@@ -79,40 +81,33 @@ export function TasksBoard({ initialTasks, initialFilter }: BoardProps) {
   const persistTask = async (patch: Partial<Task>) => {
     const id = openTask?.id;
     if (!id) {
-      // create
       const status = (openTask?.status as TaskStatus) ?? "todo";
-      const colTasks = grouped[status];
-      const nextPos = (colTasks[colTasks.length - 1]?.position ?? -1) + 1;
-
-      const insertPayload = {
-        title: patch.title ?? openTask?.title ?? "Untitled",
-        description: patch.description ?? openTask?.description ?? null,
-        status,
-        priority: (patch.priority ?? openTask?.priority ?? "medium") as Task["priority"],
-        due_date: patch.due_date ?? openTask?.due_date ?? null,
-        position: nextPos,
-      };
-
-      const { data, error } = await supabase
-        .from("tasks")
-        .insert(insertPayload)
-        .select()
-        .single();
-      if (error || !data) {
+      try {
+        const created = await createTask({
+          title: patch.title ?? openTask?.title ?? "Untitled",
+          description: patch.description ?? openTask?.description ?? null,
+          status,
+          priority: (patch.priority ?? openTask?.priority ?? "medium") ?? "medium",
+          due_date: patch.due_date ?? openTask?.due_date ?? null,
+        });
+        setTasks((cur) => [...cur, created]);
+        setOpenTask(created);
+      } catch {
         toast({ title: "Couldn't create task", variant: "destructive" });
-        return;
       }
-      setTasks((cur) => [...cur, data as Task]);
-      setOpenTask(data as Task);
       return;
     }
 
-    // optimistic update
     setTasks((cur) => cur.map((t) => (t.id === id ? { ...t, ...patch } : t)));
     setOpenTask((cur) => (cur ? { ...cur, ...patch } : cur));
-    const { error } = await supabase.from("tasks").update(patch).eq("id", id);
-    if (error) {
-      toast({ title: "Save failed", description: error.message, variant: "destructive" });
+    try {
+      await updateTask(id, patch);
+    } catch (err) {
+      toast({
+        title: "Save failed",
+        description: err instanceof Error ? err.message : undefined,
+        variant: "destructive",
+      });
       router.refresh();
     }
   };
@@ -122,9 +117,14 @@ export function TasksBoard({ initialTasks, initialFilter }: BoardProps) {
     if (!id) return;
     const prev = tasks;
     setTasks((cur) => cur.filter((t) => t.id !== id));
-    const { error } = await supabase.from("tasks").delete().eq("id", id);
-    if (error) {
-      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+    try {
+      await deleteTaskAction(id);
+    } catch (err) {
+      toast({
+        title: "Delete failed",
+        description: err instanceof Error ? err.message : undefined,
+        variant: "destructive",
+      });
       setTasks(prev);
     }
   };
@@ -146,11 +146,9 @@ export function TasksBoard({ initialTasks, initialFilter }: BoardProps) {
     let targetIndex: number;
 
     if (isStatus(overIdStr)) {
-      // Dropped onto a column
       targetStatus = overIdStr;
       targetIndex = grouped[targetStatus].length;
     } else {
-      // Dropped onto a task
       const overTask = tasks.find((t) => t.id === overIdStr);
       if (!overTask) return;
       targetStatus = overTask.status;
@@ -159,7 +157,7 @@ export function TasksBoard({ initialTasks, initialFilter }: BoardProps) {
 
     const sourceStatus = activeTask.status;
 
-    let nextGroups: Record<TaskStatus, Task[]> = {
+    const nextGroups: Record<TaskStatus, Task[]> = {
       backlog: [...grouped.backlog],
       todo: [...grouped.todo],
       in_progress: [...grouped.in_progress],
@@ -186,7 +184,6 @@ export function TasksBoard({ initialTasks, initialFilter }: BoardProps) {
       ];
     }
 
-    // Reassign positions per affected column.
     const affected: Task[] = [];
     const reassign = (status: TaskStatus) => {
       nextGroups[status] = nextGroups[status].map((t, i) => {
@@ -212,16 +209,15 @@ export function TasksBoard({ initialTasks, initialFilter }: BoardProps) {
     const previous = tasks;
     setTasks(newTasks);
 
-    // Persist
-    const updates = affected.map((t) =>
-      supabase
-        .from("tasks")
-        .update({ status: t.status, position: t.position })
-        .eq("id", t.id),
-    );
-    const results = await Promise.all(updates);
-    const failed = results.find((r) => r.error);
-    if (failed) {
+    try {
+      await reorderTasks(
+        affected.map((t) => ({
+          id: t.id,
+          status: t.status,
+          position: t.position,
+        })),
+      );
+    } catch {
       toast({ title: "Couldn't save board changes", variant: "destructive" });
       setTasks(previous);
     }

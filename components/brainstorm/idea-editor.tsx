@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
@@ -17,8 +17,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { IDEA_STATUSES } from "@/lib/constants";
-import type { Idea, IdeaLink, IdeaStatus } from "@/lib/supabase/types";
-import { createClient } from "@/lib/supabase/client";
+import type { Idea, IdeaLink, IdeaStatus } from "@/lib/types";
+import {
+  updateIdea,
+  deleteIdea,
+  createIdeaLink,
+  deleteIdeaLink,
+} from "@/lib/actions/ideas";
 import { toast } from "@/components/ui/use-toast";
 
 interface Props {
@@ -27,9 +32,7 @@ interface Props {
 }
 
 export function IdeaEditor({ initialIdea, initialLinks }: Props) {
-  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
-
   const [idea, setIdea] = useState<Idea>(initialIdea);
   const [links, setLinks] = useState<IdeaLink[]>(initialLinks);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -40,16 +43,23 @@ export function IdeaEditor({ initialIdea, initialLinks }: Props) {
 
   const persist = async (patch: Partial<Idea>) => {
     setIdea((cur) => ({ ...cur, ...patch }));
-    const { error } = await supabase.from("ideas").update(patch).eq("id", idea.id);
-    if (error) toast({ title: "Save failed", variant: "destructive" });
+    try {
+      await updateIdea(idea.id, {
+        title: patch.title,
+        body: patch.body,
+        status: patch.status ?? undefined,
+        tags: patch.tags,
+      });
+    } catch {
+      toast({ title: "Save failed", variant: "destructive" });
+    }
   };
 
   const addTag = (raw: string) => {
     const tag = raw.trim().toLowerCase();
     if (!tag) return;
     if (idea.tags.includes(tag)) return;
-    const next = [...idea.tags, tag];
-    persist({ tags: next });
+    persist({ tags: [...idea.tags, tag] });
   };
 
   const removeTag = (tag: string) => {
@@ -84,38 +94,34 @@ export function IdeaEditor({ initialIdea, initialLinks }: Props) {
       }
     }
 
-    const { data, error } = await supabase
-      .from("idea_links")
-      .insert({ idea_id: idea.id, url, label })
-      .select()
-      .single();
-
-    if (error || !data) {
+    try {
+      const created = await createIdeaLink({ idea_id: idea.id, url, label });
+      setLinks((cur) => [...cur, created]);
+      setLinkInput("");
+      setLinkLabel("");
+    } catch {
       toast({ title: "Couldn't add link", variant: "destructive" });
-      return;
     }
-    setLinks((cur) => [...cur, data as IdeaLink]);
-    setLinkInput("");
-    setLinkLabel("");
   };
 
   const removeLink = async (id: string) => {
     const prev = links;
     setLinks((cur) => cur.filter((l) => l.id !== id));
-    const { error } = await supabase.from("idea_links").delete().eq("id", id);
-    if (error) {
+    try {
+      await deleteIdeaLink(id);
+    } catch {
       toast({ title: "Couldn't remove link", variant: "destructive" });
       setLinks(prev);
     }
   };
 
   const removeIdea = async () => {
-    const { error } = await supabase.from("ideas").delete().eq("id", idea.id);
-    if (error) {
+    try {
+      await deleteIdea(idea.id);
+      router.push("/brainstorm");
+    } catch {
       toast({ title: "Delete failed", variant: "destructive" });
-      return;
     }
-    router.push("/brainstorm");
   };
 
   const hostnameOf = (url: string) => {
@@ -261,10 +267,7 @@ export function IdeaEditor({ initialIdea, initialLinks }: Props) {
             </li>
           )}
           {links.map((l) => (
-            <li
-              key={l.id}
-              className="flex items-center gap-3 px-4 py-3"
-            >
+            <li key={l.id} className="flex items-center gap-3 px-4 py-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={`https://www.google.com/s2/favicons?domain=${hostnameOf(l.url)}&sz=64`}

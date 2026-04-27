@@ -4,7 +4,7 @@ import type {
   SocialPlatform,
   SocialStatus,
   IdeaStatus,
-} from "@/lib/supabase/types";
+} from "@/lib/types";
 
 export const TASK_COLUMNS: { id: TaskStatus; label: string }[] = [
   { id: "backlog", label: "Backlog" },

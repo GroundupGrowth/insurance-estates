@@ -2,7 +2,7 @@
 
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import type { Task, TaskStatus } from "@/lib/supabase/types";
+import type { Task, TaskStatus } from "@/lib/types";
 import { TaskCard } from "./task-card";
 import { cn } from "@/lib/utils";
 

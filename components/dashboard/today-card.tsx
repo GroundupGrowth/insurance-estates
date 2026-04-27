@@ -1,17 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { format, parseISO } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PriorityDot } from "@/components/tasks/priority-dot";
-import { createClient } from "@/lib/supabase/client";
 import { Empty } from "@/components/ui/empty";
-import type { Task } from "@/lib/supabase/types";
+import type { Task } from "@/lib/types";
 import { toast } from "@/components/ui/use-toast";
+import { markTaskDone } from "@/lib/actions/tasks";
 
 export function TodayCard({ tasks }: { tasks: Task[] }) {
   const [items, setItems] = useState(tasks);
-  const supabase = createClient();
+  const [, startTransition] = useTransition();
 
   if (items.length === 0) {
     return (
@@ -22,18 +22,18 @@ export function TodayCard({ tasks }: { tasks: Task[] }) {
     );
   }
 
-  const toggle = async (id: string, checked: boolean) => {
+  const toggle = (id: string, checked: boolean) => {
     if (!checked) return;
     const prev = items;
     setItems((cur) => cur.filter((t) => t.id !== id));
-    const { error } = await supabase
-      .from("tasks")
-      .update({ status: "done" })
-      .eq("id", id);
-    if (error) {
-      toast({ title: "Couldn't mark done", variant: "destructive" });
-      setItems(prev);
-    }
+    startTransition(async () => {
+      try {
+        await markTaskDone(id);
+      } catch {
+        toast({ title: "Couldn't mark done", variant: "destructive" });
+        setItems(prev);
+      }
+    });
   };
 
   return (

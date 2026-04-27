@@ -1,25 +1,23 @@
-import { createClient } from "@/lib/supabase/server";
+import { desc } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { ideas, ideaLinks } from "@/lib/db/schema";
+import { serializeIdea } from "@/lib/db/serializers";
 import { BrainstormGrid } from "@/components/brainstorm/brainstorm-grid";
-import type { Idea, IdeaLink } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function BrainstormPage() {
-  const supabase = await createClient();
-  const [{ data: ideas }, { data: links }] = await Promise.all([
-    supabase.from("ideas").select("*").order("updated_at", { ascending: false }),
-    supabase.from("idea_links").select("idea_id"),
+  const [ideaRows, linkRows] = await Promise.all([
+    db.select().from(ideas).orderBy(desc(ideas.updatedAt)),
+    db.select({ ideaId: ideaLinks.ideaId }).from(ideaLinks),
   ]);
 
   const linkCounts: Record<string, number> = {};
-  for (const l of (links ?? []) as Pick<IdeaLink, "idea_id">[]) {
-    linkCounts[l.idea_id] = (linkCounts[l.idea_id] ?? 0) + 1;
+  for (const l of linkRows) {
+    linkCounts[l.ideaId] = (linkCounts[l.ideaId] ?? 0) + 1;
   }
 
   return (
-    <BrainstormGrid
-      initialIdeas={(ideas ?? []) as Idea[]}
-      linkCounts={linkCounts}
-    />
+    <BrainstormGrid initialIdeas={ideaRows.map(serializeIdea)} linkCounts={linkCounts} />
   );
 }

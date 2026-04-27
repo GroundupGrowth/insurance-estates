@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, Link2 } from "lucide-react";
@@ -8,8 +8,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/ui/empty";
 import { IdeaStatusPill } from "./status-pill";
-import { createClient } from "@/lib/supabase/client";
-import type { Idea } from "@/lib/supabase/types";
+import { createIdea } from "@/lib/actions/ideas";
+import type { Idea } from "@/lib/types";
 import { toast } from "@/components/ui/use-toast";
 
 interface Props {
@@ -20,19 +20,14 @@ interface Props {
 export function BrainstormGrid({ initialIdeas, linkCounts }: Props) {
   const [ideas] = useState(initialIdeas);
   const router = useRouter();
-  const supabase = useMemo(() => createClient(), []);
 
   const onNew = async () => {
-    const { data, error } = await supabase
-      .from("ideas")
-      .insert({ title: "Untitled idea" })
-      .select()
-      .single();
-    if (error || !data) {
+    try {
+      const created = await createIdea();
+      router.push(`/brainstorm/${created.id}`);
+    } catch {
       toast({ title: "Couldn't create idea", variant: "destructive" });
-      return;
     }
-    router.push(`/brainstorm/${data.id}`);
   };
 
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, List, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,12 +9,13 @@ import { SocialsTabs } from "./socials-tabs";
 import { CalendarView } from "./calendar-view";
 import { ListView } from "./list-view";
 import { PostDrawer } from "./post-drawer";
-import { createClient } from "@/lib/supabase/client";
+import {
+  createSocialPost,
+  updateSocialPost,
+  deleteSocialPost,
+} from "@/lib/actions/socials";
 import { PLATFORMS } from "@/lib/constants";
-import type {
-  SocialPlatform,
-  SocialPost,
-} from "@/lib/supabase/types";
+import type { SocialPlatform, SocialPost } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 
@@ -26,7 +27,6 @@ interface SocialsViewProps {
 type Mode = "calendar" | "list";
 
 export function SocialsView({ platform, initialPosts }: SocialsViewProps) {
-  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const [posts, setPosts] = useState(initialPosts);
   const [mode, setMode] = useState<Mode>("calendar");
@@ -61,41 +61,31 @@ export function SocialsView({ platform, initialPosts }: SocialsViewProps) {
   const persist = async (patch: Partial<SocialPost>) => {
     const id = openPost?.id;
     if (!id) {
-      const insert = {
-        platform,
-        title: patch.title ?? openPost?.title ?? "Untitled post",
-        caption: patch.caption ?? openPost?.caption ?? null,
-        hook: patch.hook ?? openPost?.hook ?? null,
-        cta: patch.cta ?? openPost?.cta ?? null,
-        hashtags: patch.hashtags ?? openPost?.hashtags ?? null,
-        media_notes: patch.media_notes ?? openPost?.media_notes ?? null,
-        status: (patch.status ?? openPost?.status ?? "idea") as SocialPost["status"],
-        scheduled_for:
-          patch.scheduled_for ?? openPost?.scheduled_for ?? null,
-      };
-      const { data, error } = await supabase
-        .from("social_posts")
-        .insert(insert)
-        .select()
-        .single();
-      if (error || !data) {
+      try {
+        const created = await createSocialPost({
+          platform,
+          title: patch.title ?? openPost?.title ?? "Untitled post",
+          caption: patch.caption ?? openPost?.caption ?? null,
+          hook: patch.hook ?? openPost?.hook ?? null,
+          cta: patch.cta ?? openPost?.cta ?? null,
+          hashtags: patch.hashtags ?? openPost?.hashtags ?? null,
+          media_notes: patch.media_notes ?? openPost?.media_notes ?? null,
+          status: patch.status ?? openPost?.status ?? "idea",
+          scheduled_for: patch.scheduled_for ?? openPost?.scheduled_for ?? null,
+        });
+        setPosts((cur) => [...cur, created]);
+        setOpenPost(created);
+      } catch {
         toast({ title: "Couldn't create post", variant: "destructive" });
-        return;
       }
-      setPosts((cur) => [...cur, data as SocialPost]);
-      setOpenPost(data as SocialPost);
       return;
     }
 
-    setPosts((cur) =>
-      cur.map((p) => (p.id === id ? { ...p, ...patch } : p)),
-    );
+    setPosts((cur) => cur.map((p) => (p.id === id ? { ...p, ...patch } : p)));
     setOpenPost((cur) => (cur ? { ...cur, ...patch } : cur));
-    const { error } = await supabase
-      .from("social_posts")
-      .update(patch)
-      .eq("id", id);
-    if (error) {
+    try {
+      await updateSocialPost(id, patch);
+    } catch {
       toast({ title: "Save failed", variant: "destructive" });
       router.refresh();
     }
@@ -106,8 +96,9 @@ export function SocialsView({ platform, initialPosts }: SocialsViewProps) {
     if (!id) return;
     const prev = posts;
     setPosts((cur) => cur.filter((p) => p.id !== id));
-    const { error } = await supabase.from("social_posts").delete().eq("id", id);
-    if (error) {
+    try {
+      await deleteSocialPost(id);
+    } catch {
       toast({ title: "Delete failed", variant: "destructive" });
       setPosts(prev);
     }
