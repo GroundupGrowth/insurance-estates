@@ -4,8 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { socialPosts } from "@/lib/db/schema";
-import { stackServerApp } from "@/stack";
-import { isAllowedEmail } from "@/lib/db/queries";
+import { getCurrentUser } from "@/stack";
 import { serializeSocialPost } from "@/lib/db/serializers";
 import type {
   SocialPlatform,
@@ -14,12 +13,7 @@ import type {
 } from "@/lib/types";
 
 async function requireUser() {
-  const user = await stackServerApp.getUser();
-  if (!user) throw new Error("Not authenticated");
-  if (!(await isAllowedEmail(user.primaryEmail))) {
-    throw new Error("Not authorized");
-  }
-  return user;
+  return getCurrentUser();
 }
 
 export interface SocialPostPatch {
