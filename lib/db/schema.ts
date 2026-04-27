@@ -129,6 +129,22 @@ export const ideaLinks = pgTable(
   }),
 );
 
+export const socialLinks = pgTable(
+  "social_links",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => socialPosts.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    label: text("label"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (t) => ({
+    postIdIdx: index("social_links_post_id_idx").on(t.postId),
+  }),
+);
+
 export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
 export type SocialPost = typeof socialPosts.$inferSelect;
@@ -137,3 +153,5 @@ export type Idea = typeof ideas.$inferSelect;
 export type NewIdea = typeof ideas.$inferInsert;
 export type IdeaLink = typeof ideaLinks.$inferSelect;
 export type NewIdeaLink = typeof ideaLinks.$inferInsert;
+export type SocialLink = typeof socialLinks.$inferSelect;
+export type NewSocialLink = typeof socialLinks.$inferInsert;

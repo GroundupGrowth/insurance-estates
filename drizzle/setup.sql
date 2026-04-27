@@ -35,6 +35,14 @@ CREATE TABLE IF NOT EXISTS "idea_links" (
   "created_at" timestamp with time zone DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS "social_links" (
+  "id"         uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+  "post_id"    uuid NOT NULL,
+  "url"        text NOT NULL,
+  "label"      text,
+  "created_at" timestamp with time zone DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS "social_posts" (
   "id"            uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
   "platform"      "social_platform" NOT NULL,
@@ -75,8 +83,16 @@ DO $$ BEGIN
     ON DELETE cascade ON UPDATE no action;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+DO $$ BEGIN
+  ALTER TABLE "social_links"
+    ADD CONSTRAINT "social_links_post_id_social_posts_id_fk"
+    FOREIGN KEY ("post_id") REFERENCES "public"."social_posts"("id")
+    ON DELETE cascade ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 -- Indexes ------------------------------------------------------
 CREATE INDEX IF NOT EXISTS "idea_links_idea_id_idx"            ON "idea_links"   USING btree ("idea_id");
+CREATE INDEX IF NOT EXISTS "social_links_post_id_idx"          ON "social_links" USING btree ("post_id");
 CREATE INDEX IF NOT EXISTS "ideas_updated_at_idx"              ON "ideas"        USING btree ("updated_at");
 CREATE INDEX IF NOT EXISTS "social_posts_platform_status_idx"  ON "social_posts" USING btree ("platform","status");
 CREATE INDEX IF NOT EXISTS "social_posts_scheduled_for_idx"    ON "social_posts" USING btree ("scheduled_for");

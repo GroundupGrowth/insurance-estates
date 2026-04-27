@@ -53,3 +53,11 @@ export interface IdeaLink {
   label: string | null;
   created_at: string;
 }
+
+export interface SocialLink {
+  id: string;
+  post_id: string;
+  url: string;
+  label: string | null;
+  created_at: string;
+}

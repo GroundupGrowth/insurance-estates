@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, X } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -25,17 +25,29 @@ import type {
   SocialPlatform,
   SocialPost,
   SocialStatus,
+  SocialLink,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { createSocialLink, deleteSocialLink } from "@/lib/actions/socials";
+import { toast } from "@/components/ui/use-toast";
 
 interface PostDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   platform: SocialPlatform;
   post: Partial<SocialPost> | null;
+  links: SocialLink[];
   onSave: (patch: Partial<SocialPost>) => Promise<void> | void;
   onDelete?: () => Promise<void> | void;
 }
+
+const hostnameOf = (url: string) => {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+};
 
 const charLimit = (platform: SocialPlatform) =>
   PLATFORMS.find((p) => p.value === platform)?.charLimit ?? 0;
@@ -58,6 +70,7 @@ export function PostDrawer({
   onOpenChange,
   platform,
   post,
+  links,
   onSave,
   onDelete,
 }: PostDrawerProps) {
@@ -70,6 +83,9 @@ export function PostDrawer({
   const [status, setStatus] = useState<SocialStatus>("idea");
   const [scheduledFor, setScheduledFor] = useState<string>("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [linkRows, setLinkRows] = useState<SocialLink[]>([]);
+  const [linkInput, setLinkInput] = useState("");
+  const [linkLabel, setLinkLabel] = useState("");
 
   useEffect(() => {
     if (post) {
@@ -82,8 +98,39 @@ export function PostDrawer({
       setStatus((post.status as SocialStatus) ?? "idea");
       setScheduledFor(toLocalInput(post.scheduled_for));
       setConfirmDelete(false);
+      setLinkRows(links);
+      setLinkInput("");
+      setLinkLabel("");
     }
-  }, [post]);
+  }, [post, links]);
+
+  const addLink = async () => {
+    const url = linkInput.trim();
+    if (!url || !post?.id) return;
+    try {
+      const created = await createSocialLink({
+        post_id: post.id,
+        url,
+        label: linkLabel.trim() || null,
+      });
+      setLinkRows((cur) => [...cur, created]);
+      setLinkInput("");
+      setLinkLabel("");
+    } catch {
+      toast({ title: "Couldn't add link", variant: "destructive" });
+    }
+  };
+
+  const removeLink = async (id: string) => {
+    const prev = linkRows;
+    setLinkRows((cur) => cur.filter((l) => l.id !== id));
+    try {
+      await deleteSocialLink(id);
+    } catch {
+      toast({ title: "Couldn't remove link", variant: "destructive" });
+      setLinkRows(prev);
+    }
+  };
 
   const limit = charLimit(platform);
   const captionOver = caption.length > limit;
@@ -221,6 +268,83 @@ export function PostDrawer({
                 }}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Links</Label>
+            {post?.id ? (
+              <>
+                <ul className="flex flex-col divide-y divide-app-border rounded-lg border border-app-border bg-white">
+                  {linkRows.length === 0 && (
+                    <li className="px-3 py-2 text-xs text-app-muted">
+                      No links yet. Paste one below.
+                    </li>
+                  )}
+                  {linkRows.map((l) => (
+                    <li key={l.id} className="flex items-center gap-2 px-3 py-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`https://www.google.com/s2/favicons?domain=${hostnameOf(l.url)}&sz=64`}
+                        alt=""
+                        width={16}
+                        height={16}
+                        className="rounded"
+                      />
+                      <a
+                        href={l.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex-1 truncate text-sm text-app-ink hover:underline"
+                      >
+                        {l.label ?? hostnameOf(l.url)}
+                      </a>
+                      <span className="text-[11px] text-app-muted truncate max-w-[140px]">
+                        {hostnameOf(l.url)}
+                      </span>
+                      <button
+                        onClick={() => removeLink(l.id)}
+                        className="text-app-muted hover:text-app-ink"
+                        aria-label="Remove link"
+                      >
+                        <X size={14} strokeWidth={1.75} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex flex-col md:flex-row gap-2">
+                  <Input
+                    value={linkInput}
+                    onChange={(e) => setLinkInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void addLink();
+                      }
+                    }}
+                    placeholder="Paste a URL…"
+                    className="md:flex-1"
+                  />
+                  <Input
+                    value={linkLabel}
+                    onChange={(e) => setLinkLabel(e.target.value)}
+                    placeholder="Optional label"
+                    className="md:w-40"
+                  />
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={addLink}
+                    disabled={!linkInput.trim()}
+                  >
+                    Add
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-app-muted">
+                Save the post first, then attach links.
+              </p>
+            )}
           </div>
         </div>
 

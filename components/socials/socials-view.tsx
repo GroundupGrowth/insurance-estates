@@ -2,11 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, List, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { SocialsTabs } from "./socials-tabs";
-import { CalendarView } from "./calendar-view";
 import { ListView } from "./list-view";
 import { PostDrawer } from "./post-drawer";
 import {
@@ -15,21 +14,18 @@ import {
   deleteSocialPost,
 } from "@/lib/actions/socials";
 import { PLATFORMS } from "@/lib/constants";
-import type { SocialPlatform, SocialPost } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import type { SocialPlatform, SocialPost, SocialLink } from "@/lib/types";
 import { toast } from "@/components/ui/use-toast";
 
 interface SocialsViewProps {
   platform: SocialPlatform;
   initialPosts: SocialPost[];
+  initialLinks: SocialLink[];
 }
 
-type Mode = "calendar" | "list";
-
-export function SocialsView({ platform, initialPosts }: SocialsViewProps) {
+export function SocialsView({ platform, initialPosts, initialLinks }: SocialsViewProps) {
   const router = useRouter();
   const [posts, setPosts] = useState(initialPosts);
-  const [mode, setMode] = useState<Mode>("calendar");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [openPost, setOpenPost] = useState<Partial<SocialPost> | null>(null);
 
@@ -41,22 +37,14 @@ export function SocialsView({ platform, initialPosts }: SocialsViewProps) {
     setDrawerOpen(true);
   };
 
-  const openNewForDay = (date: Date) => {
-    const d = new Date(date);
-    d.setHours(9, 0, 0, 0);
-    setOpenPost({
-      platform,
-      title: "",
-      status: "idea",
-      scheduled_for: d.toISOString(),
-    });
-    setDrawerOpen(true);
-  };
-
   const openNew = () => {
     setOpenPost({ platform, title: "", status: "idea" });
     setDrawerOpen(true);
   };
+
+  const linksForOpenPost = openPost?.id
+    ? initialLinks.filter((l) => l.post_id === openPost.id)
+    : [];
 
   const persist = async (patch: Partial<SocialPost>) => {
     const id = openPost?.id;
@@ -108,54 +96,18 @@ export function SocialsView({ platform, initialPosts }: SocialsViewProps) {
     <>
       <PageHeader
         title="Socials"
-        description={`Plan and draft ${platformLabel} posts. Pure planning — no posting, no analytics.`}
+        description={`Ideate and structure ${platformLabel} posts. Scheduling lives in Calendar.`}
       />
 
       <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <SocialsTabs />
-        <div className="flex items-center gap-2">
-          <div className="inline-flex h-9 items-center rounded-lg border border-app-border bg-white p-1">
-            <button
-              onClick={() => setMode("calendar")}
-              className={cn(
-                "inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors duration-150",
-                mode === "calendar"
-                  ? "bg-app-active text-app-ink"
-                  : "text-app-subtle hover:text-app-ink",
-              )}
-            >
-              <CalendarDays size={14} strokeWidth={1.75} />
-              Calendar
-            </button>
-            <button
-              onClick={() => setMode("list")}
-              className={cn(
-                "inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors duration-150",
-                mode === "list"
-                  ? "bg-app-active text-app-ink"
-                  : "text-app-subtle hover:text-app-ink",
-              )}
-            >
-              <List size={14} strokeWidth={1.75} />
-              List
-            </button>
-          </div>
-          <Button onClick={openNew}>
-            <Plus size={16} strokeWidth={2} />
-            New post
-          </Button>
-        </div>
+        <Button onClick={openNew}>
+          <Plus size={16} strokeWidth={2} />
+          New post
+        </Button>
       </div>
 
-      {mode === "calendar" ? (
-        <CalendarView
-          posts={posts}
-          onOpen={openExisting}
-          onCreateForDay={openNewForDay}
-        />
-      ) : (
-        <ListView posts={posts} onOpen={openExisting} />
-      )}
+      <ListView posts={posts} onOpen={openExisting} />
 
       <PostDrawer
         open={drawerOpen}
@@ -165,6 +117,7 @@ export function SocialsView({ platform, initialPosts }: SocialsViewProps) {
         }}
         platform={platform}
         post={openPost}
+        links={linksForOpenPost}
         onSave={persist}
         onDelete={openPost?.id ? remove : undefined}
       />

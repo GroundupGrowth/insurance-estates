@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { socialPosts } from "@/lib/db/schema";
+import { socialPosts, socialLinks } from "@/lib/db/schema";
 import { getCurrentUser } from "@/stack";
-import { serializeSocialPost } from "@/lib/db/serializers";
+import { serializeSocialPost, serializeSocialLink } from "@/lib/db/serializers";
 import type {
   SocialPlatform,
   SocialPost,
   SocialStatus,
+  SocialLink,
 } from "@/lib/types";
 
 async function requireUser() {
@@ -95,4 +96,42 @@ export async function deleteSocialPost(id: string): Promise<void> {
     .where(eq(socialPosts.id, id))
     .returning({ platform: socialPosts.platform });
   if (row) revalidatePath(`/socials/${row.platform}`);
+}
+
+export async function createSocialLink(input: {
+  post_id: string;
+  url: string;
+  label?: string | null;
+}): Promise<SocialLink> {
+  await requireUser();
+  const [row] = await db
+    .insert(socialLinks)
+    .values({
+      postId: input.post_id,
+      url: input.url,
+      label: input.label ?? null,
+    })
+    .returning();
+  const [post] = await db
+    .select({ platform: socialPosts.platform })
+    .from(socialPosts)
+    .where(eq(socialPosts.id, input.post_id))
+    .limit(1);
+  if (post) revalidatePath(`/socials/${post.platform}`);
+  return serializeSocialLink(row);
+}
+
+export async function deleteSocialLink(id: string): Promise<void> {
+  await requireUser();
+  const [row] = await db
+    .delete(socialLinks)
+    .where(eq(socialLinks.id, id))
+    .returning({ postId: socialLinks.postId });
+  if (!row) return;
+  const [post] = await db
+    .select({ platform: socialPosts.platform })
+    .from(socialPosts)
+    .where(eq(socialPosts.id, row.postId))
+    .limit(1);
+  if (post) revalidatePath(`/socials/${post.platform}`);
 }

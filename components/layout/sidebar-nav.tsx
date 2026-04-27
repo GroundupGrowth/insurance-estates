@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, KanbanSquare, Megaphone, Lightbulb, FolderKanban } from "lucide-react";
+import { LayoutGrid, KanbanSquare, Megaphone, Lightbulb, FolderKanban, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
   { href: "/tasks", label: "Tasks", icon: KanbanSquare },
   { href: "/socials", label: "Socials", icon: Megaphone },
+  { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/brainstorm", label: "Brainstorm", icon: Lightbulb },
   { href: "/projects", label: "Projects", icon: FolderKanban },
 ];

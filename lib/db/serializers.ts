@@ -3,12 +3,14 @@ import type {
   SocialPost as SocialPostRow,
   Idea as IdeaRow,
   IdeaLink as IdeaLinkRow,
+  SocialLink as SocialLinkRow,
 } from "./schema";
 import type {
   Task,
   SocialPost,
   Idea,
   IdeaLink,
+  SocialLink,
   TaskStatus,
   TaskPriority,
   Assignee,
@@ -76,6 +78,16 @@ export function serializeIdeaLink(row: IdeaLinkRow): IdeaLink {
   return {
     id: row.id,
     idea_id: row.ideaId,
+    url: row.url,
+    label: row.label ?? null,
+    created_at: isoOrNow(row.createdAt),
+  };
+}
+
+export function serializeSocialLink(row: SocialLinkRow): SocialLink {
+  return {
+    id: row.id,
+    post_id: row.postId,
     url: row.url,
     label: row.label ?? null,
     created_at: isoOrNow(row.createdAt),
