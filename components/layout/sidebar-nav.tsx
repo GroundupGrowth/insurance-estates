@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, KanbanSquare, Megaphone, Lightbulb, Users } from "lucide-react";
+import { LayoutGrid, KanbanSquare, Megaphone, Lightbulb, FolderKanban } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const navItems = [
@@ -10,7 +10,7 @@ export const navItems = [
   { href: "/tasks", label: "Tasks", icon: KanbanSquare },
   { href: "/socials", label: "Socials", icon: Megaphone },
   { href: "/brainstorm", label: "Brainstorm", icon: Lightbulb },
-  { href: "/clients", label: "Clients", icon: Users },
+  { href: "/projects", label: "Projects", icon: FolderKanban },
 ];
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {

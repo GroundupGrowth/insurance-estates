@@ -1,12 +1,12 @@
 import { ExternalLink } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 
-export default function ClientsPage() {
+export default function ProjectsPage() {
   return (
     <>
       <PageHeader
-        title="Clients"
-        description="One client for now. Placeholder until we expand."
+        title="Projects"
+        description="One project for now. Placeholder until we expand."
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
