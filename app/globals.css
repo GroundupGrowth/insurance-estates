@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    background-color: #f4f4f2;
+    color: #1a1a1a;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  *,
+  *::before,
+  *::after {
+    border-color: #e8e8e6;
+  }
+
+  ::selection {
+    background-color: #ff5b8a;
+    color: #ffffff;
+  }
+}
+
+@layer utilities {
+  .focus-ring {
+    @apply outline-none ring-0 focus-visible:ring-2 focus-visible:ring-[#FF5B8A]/30 focus-visible:ring-offset-0;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #e8e8e6;
+    border-radius: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* Skeleton tone */
+.skeleton {
+  background: #edeae3;
+  border-radius: 0.5rem;
+  position: relative;
+  overflow: hidden;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+@keyframes skeleton-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
