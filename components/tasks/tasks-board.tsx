@@ -23,7 +23,7 @@ import {
   reorderTasks,
 } from "@/lib/actions/tasks";
 import { TaskColumn } from "./task-column";
-import { TaskDrawer } from "./task-drawer";
+import { TaskDialog } from "./task-dialog";
 import { TaskCard } from "./task-card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -41,7 +41,7 @@ export function TasksBoard({ initialTasks, initialFilter }: BoardProps) {
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [openTask, setOpenTask] = useState<Partial<Task> | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -70,12 +70,12 @@ export function TasksBoard({ initialTasks, initialFilter }: BoardProps) {
 
   const openNew = (status: TaskStatus = "todo") => {
     setOpenTask({ status, priority: "medium" });
-    setDrawerOpen(true);
+    setDialogOpen(true);
   };
 
   const openExisting = (task: Task) => {
     setOpenTask(task);
-    setDrawerOpen(true);
+    setDialogOpen(true);
   };
 
   const persistTask = async (patch: Partial<Task>) => {
@@ -261,10 +261,10 @@ export function TasksBoard({ initialTasks, initialFilter }: BoardProps) {
         </DragOverlay>
       </DndContext>
 
-      <TaskDrawer
-        open={drawerOpen}
+      <TaskDialog
+        open={dialogOpen}
         onOpenChange={(o) => {
-          setDrawerOpen(o);
+          setDialogOpen(o);
           if (!o) setOpenTask(null);
         }}
         task={openTask}

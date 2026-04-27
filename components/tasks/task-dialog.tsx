@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
 import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,7 @@ import {
 import { TASK_COLUMNS, PRIORITY_OPTIONS } from "@/lib/constants";
 import type { Task, TaskPriority, TaskStatus } from "@/lib/types";
 
-interface TaskDrawerProps {
+interface TaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   task: Partial<Task> | null;
@@ -31,13 +31,16 @@ interface TaskDrawerProps {
   onDelete?: () => Promise<void> | void;
 }
 
-export function TaskDrawer({ open, onOpenChange, task, onSave, onDelete }: TaskDrawerProps) {
+export function TaskDialog({ open, onOpenChange, task, onSave, onDelete }: TaskDialogProps) {
+  const isNew = !task?.id;
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<TaskStatus>("todo");
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [dueDate, setDueDate] = useState<string>("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     if (task) {
@@ -47,19 +50,39 @@ export function TaskDrawer({ open, onOpenChange, task, onSave, onDelete }: TaskD
       setPriority((task.priority as TaskPriority) ?? "medium");
       setDueDate(task.due_date ?? "");
       setConfirmDelete(false);
+      setCreating(false);
     }
   }, [task]);
 
   const flush = (patch: Partial<Task>) => {
+    if (isNew) return;
     void onSave(patch);
   };
 
+  const handleCreate = async () => {
+    const t = title.trim();
+    if (!t) return;
+    setCreating(true);
+    try {
+      await onSave({
+        title: t,
+        description: description || null,
+        status,
+        priority,
+        due_date: dueDate || null,
+      });
+      onOpenChange(false);
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="p-0">
-        <SheetHeader>
-          <SheetTitle>{task?.id ? "Edit task" : "New task"}</SheetTitle>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{isNew ? "New task" : "Edit task"}</DialogTitle>
+        </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
           <div className="space-y-2">
@@ -67,9 +90,19 @@ export function TaskDrawer({ open, onOpenChange, task, onSave, onDelete }: TaskD
             <Input
               id="task-title"
               value={title}
-              autoFocus={!task?.id}
+              autoFocus={isNew}
               onChange={(e) => setTitle(e.target.value)}
-              onBlur={() => title !== (task?.title ?? "") && flush({ title })}
+              onBlur={() =>
+                !isNew &&
+                title !== (task?.title ?? "") &&
+                flush({ title })
+              }
+              onKeyDown={(e) => {
+                if (isNew && e.key === "Enter") {
+                  e.preventDefault();
+                  void handleCreate();
+                }
+              }}
               placeholder="What needs doing?"
             />
           </div>
@@ -82,10 +115,12 @@ export function TaskDrawer({ open, onOpenChange, task, onSave, onDelete }: TaskD
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               onBlur={() =>
-                description !== (task?.description ?? "") && flush({ description })
+                !isNew &&
+                description !== (task?.description ?? "") &&
+                flush({ description })
               }
               placeholder="More detail, links, acceptance criteria…"
-              className="min-h-[120px]"
+              className="min-h-[100px]"
             />
           </div>
 
@@ -144,6 +179,7 @@ export function TaskDrawer({ open, onOpenChange, task, onSave, onDelete }: TaskD
               value={dueDate ?? ""}
               onChange={(e) => setDueDate(e.target.value)}
               onBlur={() =>
+                !isNew &&
                 (dueDate || null) !== (task?.due_date ?? null) &&
                 flush({ due_date: dueDate || null })
               }
@@ -151,41 +187,60 @@ export function TaskDrawer({ open, onOpenChange, task, onSave, onDelete }: TaskD
           </div>
         </div>
 
-        {onDelete && task?.id && (
-          <SheetFooter>
-            {confirmDelete ? (
-              <div className="flex w-full items-center justify-between gap-2">
-                <span className="text-xs text-app-muted">Delete this task?</span>
-                <div className="flex gap-2">
-                  <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(false)}>
-                    Cancel
-                  </Button>
+        <DialogFooter>
+          {isNew ? (
+            <>
+              <Button variant="secondary" size="sm" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleCreate}
+                disabled={!title.trim() || creating}
+              >
+                {creating ? "Creating…" : "Create task"}
+              </Button>
+            </>
+          ) : (
+            <>
+              {onDelete ? (
+                confirmDelete ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-app-muted">Delete this task?</span>
+                    <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={async () => {
+                        await onDelete();
+                        onOpenChange(false);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                ) : (
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={async () => {
-                      await onDelete();
-                      onOpenChange(false);
-                    }}
+                    onClick={() => setConfirmDelete(true)}
                   >
+                    <Trash2 size={14} strokeWidth={1.75} />
                     Delete
                   </Button>
-                </div>
-              </div>
-            ) : (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setConfirmDelete(true)}
-                className="ml-auto"
-              >
-                <Trash2 size={14} strokeWidth={1.75} />
-                Delete
+                )
+              ) : (
+                <span />
+              )}
+              <Button size="sm" onClick={() => onOpenChange(false)}>
+                Done
               </Button>
-            )}
-          </SheetFooter>
-        )}
-      </SheetContent>
-    </Sheet>
+            </>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

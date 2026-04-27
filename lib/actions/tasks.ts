@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq, and, asc, sql } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { tasks } from "@/lib/db/schema";
 import { getCurrentUser } from "@/stack";
@@ -52,7 +52,7 @@ export async function createTask(input: {
       .select({ position: tasks.position })
       .from(tasks)
       .where(eq(tasks.status, input.status))
-      .orderBy(asc(sql`${tasks.position} desc`))
+      .orderBy(desc(tasks.position))
       .limit(1);
     position = (last[0]?.position ?? -1) + 1;
   }
