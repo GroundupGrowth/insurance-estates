@@ -18,7 +18,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { SOCIAL_STATUS_TINT, PLATFORMS } from "@/lib/constants";
+import { SOCIAL_STATUS_TINT, PLATFORMS, PLATFORM_COLOR } from "@/lib/constants";
 import type { SocialPlatform, SocialPost } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -84,12 +84,16 @@ export function CalendarBoard({ posts }: CalendarBoardProps) {
             key={p.value}
             onClick={() => setFilter(p.value)}
             className={cn(
-              "rounded-full border px-3 py-1 text-xs transition-colors duration-150",
+              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors duration-150",
               filter === p.value
                 ? "border-app-ink bg-app-active text-app-ink"
                 : "border-app-border bg-white text-app-subtle hover:text-app-ink",
             )}
           >
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ backgroundColor: PLATFORM_COLOR[p.value] }}
+            />
             {p.label}
           </button>
         ))}
@@ -164,11 +168,14 @@ export function CalendarBoard({ posts }: CalendarBoardProps) {
                       <Link
                         key={p.id}
                         href={`/socials/${p.platform}`}
-                        className="flex items-center gap-1 truncate rounded px-1.5 py-0.5 text-[10px] font-medium hover:opacity-90"
+                        className="flex items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] font-medium hover:opacity-90"
                         style={{ backgroundColor: tint.bg, color: tint.text }}
-                        title={p.title || "Untitled"}
+                        title={`${p.platform}: ${p.title || "Untitled"}`}
                       >
-                        <span className="font-bold tabular-nums">
+                        <span
+                          className="rounded-sm px-1 text-[9px] font-bold leading-none text-white tabular-nums"
+                          style={{ backgroundColor: PLATFORM_COLOR[p.platform] }}
+                        >
                           {PLATFORM_TAG[p.platform]}
                         </span>
                         <span className="truncate">{p.title || "Untitled"}</span>

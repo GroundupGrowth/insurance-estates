@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PLATFORMS } from "@/lib/constants";
+import { PLATFORMS, PLATFORM_COLOR } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 export function SocialsTabs() {
@@ -16,12 +16,16 @@ export function SocialsTabs() {
             key={p.value}
             href={`/socials/${p.value}`}
             className={cn(
-              "inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-150",
+              "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-150",
               active
                 ? "bg-white text-app-ink shadow-sm"
                 : "hover:text-app-ink",
             )}
           >
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ backgroundColor: PLATFORM_COLOR[p.value] }}
+            />
             {p.label}
           </Link>
         );

@@ -50,6 +50,13 @@ export const PLATFORMS: { value: SocialPlatform; label: string; charLimit: numbe
   { value: "linkedin", label: "LinkedIn", charLimit: 3000 },
 ];
 
+export const PLATFORM_COLOR: Record<SocialPlatform, string> = {
+  instagram: "#E1306C",
+  facebook: "#1877F2",
+  youtube: "#FF0000",
+  linkedin: "#0A66C2",
+};
+
 export const SOCIAL_STATUSES: { value: SocialStatus; label: string }[] = [
   { value: "idea", label: "Idea" },
   { value: "drafting", label: "Drafting" },
