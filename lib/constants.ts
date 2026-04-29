@@ -5,6 +5,7 @@ import type {
   SocialPlatform,
   SocialStatus,
   IdeaStatus,
+  ProjectStatus,
 } from "@/lib/types";
 
 export const TASK_COLUMNS: { id: TaskStatus; label: string }[] = [
@@ -91,6 +92,29 @@ export const IDEA_STATUS_TINT: Record<IdeaStatus, { bg: string; text: string }> 
   parked: { bg: "#EDEAE3", text: "#3D3A33" },
   killed: { bg: "#F5DCDC", text: "#8A3A3A" },
 };
+
+export const PROJECT_STATUSES: { value: ProjectStatus; label: string }[] = [
+  { value: "active", label: "Active" },
+  { value: "paused", label: "Paused" },
+  { value: "archived", label: "Archived" },
+];
+
+export const PROJECT_STATUS_TINT: Record<ProjectStatus, { bg: string; text: string }> = {
+  active: { bg: "#E5EFE2", text: "#3F6E3A" },
+  paused: { bg: "#F5ECDA", text: "#7A5A1F" },
+  archived: { bg: "#EDEAE3", text: "#3D3A33" },
+};
+
+export const PROJECT_COLOR_PRESETS: string[] = [
+  "#2E5A87",
+  "#3F6E3A",
+  "#7A5A1F",
+  "#A8345C",
+  "#FF5B8A",
+  "#7DA8D6",
+  "#7DAE73",
+  "#3D3A33",
+];
 
 export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
   backlog: "Backlog",

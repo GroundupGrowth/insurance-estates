@@ -6,6 +6,7 @@ export type SocialPlatform = "instagram" | "facebook" | "youtube" | "linkedin";
 export type SocialStatus = "idea" | "drafting" | "ready" | "scheduled" | "posted";
 
 export type IdeaStatus = "raw" | "exploring" | "greenlit" | "parked" | "killed";
+export type ProjectStatus = "active" | "paused" | "archived";
 
 export interface Task {
   id: string;
@@ -78,4 +79,19 @@ export interface SocialCompetitor {
   notes: string | null;
   position: number;
   created_at: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  topic: string | null;
+  description: string | null;
+  owner: string | null;
+  url: string | null;
+  color: string;
+  notes: string | null;
+  status: ProjectStatus;
+  position: number;
+  created_at: string;
+  updated_at: string;
 }

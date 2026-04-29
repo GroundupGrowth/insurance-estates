@@ -11,6 +11,7 @@ DO $$ BEGIN CREATE TYPE "public"."social_platform" AS ENUM ('instagram','faceboo
 DO $$ BEGIN CREATE TYPE "public"."social_status"   AS ENUM ('idea','drafting','ready','scheduled','posted');      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE "public"."task_priority"   AS ENUM ('low','medium','high');                                EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE "public"."task_status"     AS ENUM ('backlog','todo','in_progress','review','done');      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "public"."project_status"  AS ENUM ('active','paused','archived');                          EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Tables -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS "allowed_emails" (
@@ -59,6 +60,21 @@ CREATE TABLE IF NOT EXISTS "social_competitors" (
   "notes"      text,
   "position"   integer DEFAULT 0 NOT NULL,
   "created_at" timestamp with time zone DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS "projects" (
+  "id"          uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+  "name"        text NOT NULL,
+  "topic"       text,
+  "description" text,
+  "owner"       text,
+  "url"         text,
+  "color"       text DEFAULT '#2E5A87',
+  "notes"       text,
+  "status"      "project_status" NOT NULL DEFAULT 'active',
+  "position"    integer DEFAULT 0 NOT NULL,
+  "created_at"  timestamp with time zone DEFAULT now(),
+  "updated_at"  timestamp with time zone DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS "social_posts" (
@@ -112,6 +128,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 CREATE INDEX IF NOT EXISTS "idea_links_idea_id_idx"            ON "idea_links"   USING btree ("idea_id");
 CREATE INDEX IF NOT EXISTS "social_links_post_id_idx"          ON "social_links" USING btree ("post_id");
 CREATE INDEX IF NOT EXISTS "social_competitors_platform_idx"   ON "social_competitors" USING btree ("platform");
+CREATE INDEX IF NOT EXISTS "projects_status_idx"               ON "projects"      USING btree ("status");
 CREATE INDEX IF NOT EXISTS "ideas_updated_at_idx"              ON "ideas"        USING btree ("updated_at");
 CREATE INDEX IF NOT EXISTS "social_posts_platform_status_idx"  ON "social_posts" USING btree ("platform","status");
 CREATE INDEX IF NOT EXISTS "social_posts_scheduled_for_idx"    ON "social_posts" USING btree ("scheduled_for");

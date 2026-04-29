@@ -6,6 +6,7 @@ import type {
   SocialLink as SocialLinkRow,
   SocialChannel as SocialChannelRow,
   SocialCompetitor as SocialCompetitorRow,
+  Project as ProjectRow,
 } from "./schema";
 import type {
   Task,
@@ -15,12 +16,14 @@ import type {
   SocialLink,
   SocialChannel,
   SocialCompetitor,
+  Project,
   TaskStatus,
   TaskPriority,
   Assignee,
   SocialPlatform,
   SocialStatus,
   IdeaStatus,
+  ProjectStatus,
 } from "@/lib/types";
 
 const isoOrNow = (d: Date | string | null | undefined) => {
@@ -117,5 +120,22 @@ export function serializeSocialCompetitor(row: SocialCompetitorRow): SocialCompe
     notes: row.notes ?? null,
     position: row.position,
     created_at: isoOrNow(row.createdAt),
+  };
+}
+
+export function serializeProject(row: ProjectRow): Project {
+  return {
+    id: row.id,
+    name: row.name,
+    topic: row.topic ?? null,
+    description: row.description ?? null,
+    owner: row.owner ?? null,
+    url: row.url ?? null,
+    color: row.color ?? "#2E5A87",
+    notes: row.notes ?? null,
+    status: row.status as ProjectStatus,
+    position: row.position,
+    created_at: isoOrNow(row.createdAt),
+    updated_at: isoOrNow(row.updatedAt),
   };
 }

@@ -47,6 +47,12 @@ export const ideaStatusEnum = pgEnum("idea_status", [
   "killed",
 ]);
 
+export const projectStatusEnum = pgEnum("project_status", [
+  "active",
+  "paused",
+  "archived",
+]);
+
 export const allowedEmails = pgTable("allowed_emails", {
   email: text("email").primaryKey(),
 });
@@ -153,6 +159,27 @@ export const socialChannels = pgTable("social_channels", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
+export const projects = pgTable(
+  "projects",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    topic: text("topic"),
+    description: text("description"),
+    owner: text("owner"),
+    url: text("url"),
+    color: text("color").default("#2E5A87"),
+    notes: text("notes"),
+    status: projectStatusEnum("status").notNull().default("active"),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  },
+  (t) => ({
+    statusIdx: index("projects_status_idx").on(t.status),
+  }),
+);
+
 export const socialCompetitors = pgTable(
   "social_competitors",
   {
@@ -183,3 +210,5 @@ export type SocialChannel = typeof socialChannels.$inferSelect;
 export type NewSocialChannel = typeof socialChannels.$inferInsert;
 export type SocialCompetitor = typeof socialCompetitors.$inferSelect;
 export type NewSocialCompetitor = typeof socialCompetitors.$inferInsert;
+export type Project = typeof projects.$inferSelect;
+export type NewProject = typeof projects.$inferInsert;
