@@ -43,6 +43,24 @@ CREATE TABLE IF NOT EXISTS "social_links" (
   "created_at" timestamp with time zone DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS "social_channels" (
+  "platform"    "social_platform" PRIMARY KEY,
+  "drive_url"   text,
+  "account_url" text,
+  "notes"       text,
+  "updated_at"  timestamp with time zone DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS "social_competitors" (
+  "id"         uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+  "platform"   "social_platform" NOT NULL,
+  "name"       text NOT NULL,
+  "url"        text,
+  "notes"      text,
+  "position"   integer DEFAULT 0 NOT NULL,
+  "created_at" timestamp with time zone DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS "social_posts" (
   "id"            uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
   "platform"      "social_platform" NOT NULL,
@@ -93,6 +111,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 -- Indexes ------------------------------------------------------
 CREATE INDEX IF NOT EXISTS "idea_links_idea_id_idx"            ON "idea_links"   USING btree ("idea_id");
 CREATE INDEX IF NOT EXISTS "social_links_post_id_idx"          ON "social_links" USING btree ("post_id");
+CREATE INDEX IF NOT EXISTS "social_competitors_platform_idx"   ON "social_competitors" USING btree ("platform");
 CREATE INDEX IF NOT EXISTS "ideas_updated_at_idx"              ON "ideas"        USING btree ("updated_at");
 CREATE INDEX IF NOT EXISTS "social_posts_platform_status_idx"  ON "social_posts" USING btree ("platform","status");
 CREATE INDEX IF NOT EXISTS "social_posts_scheduled_for_idx"    ON "social_posts" USING btree ("scheduled_for");

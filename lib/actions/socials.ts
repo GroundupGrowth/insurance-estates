@@ -1,16 +1,28 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { socialPosts, socialLinks } from "@/lib/db/schema";
+import {
+  socialPosts,
+  socialLinks,
+  socialChannels,
+  socialCompetitors,
+} from "@/lib/db/schema";
 import { getCurrentUser } from "@/stack";
-import { serializeSocialPost, serializeSocialLink } from "@/lib/db/serializers";
+import {
+  serializeSocialPost,
+  serializeSocialLink,
+  serializeSocialChannel,
+  serializeSocialCompetitor,
+} from "@/lib/db/serializers";
 import type {
   SocialPlatform,
   SocialPost,
   SocialStatus,
   SocialLink,
+  SocialChannel,
+  SocialCompetitor,
 } from "@/lib/types";
 
 async function requireUser() {
@@ -134,4 +146,95 @@ export async function deleteSocialLink(id: string): Promise<void> {
     .where(eq(socialPosts.id, row.postId))
     .limit(1);
   if (post) revalidatePath(`/socials/${post.platform}`);
+}
+
+export interface SocialChannelPatch {
+  drive_url?: string | null;
+  account_url?: string | null;
+  notes?: string | null;
+}
+
+export async function upsertSocialChannel(
+  platform: SocialPlatform,
+  patch: SocialChannelPatch,
+): Promise<SocialChannel> {
+  await requireUser();
+  const values = {
+    platform,
+    driveUrl: patch.drive_url ?? null,
+    accountUrl: patch.account_url ?? null,
+    notes: patch.notes ?? null,
+    updatedAt: new Date(),
+  };
+  const [row] = await db
+    .insert(socialChannels)
+    .values(values)
+    .onConflictDoUpdate({
+      target: socialChannels.platform,
+      set: {
+        driveUrl: values.driveUrl,
+        accountUrl: values.accountUrl,
+        notes: values.notes,
+        updatedAt: values.updatedAt,
+      },
+    })
+    .returning();
+  revalidatePath(`/socials/${platform}`);
+  return serializeSocialChannel(row);
+}
+
+export async function createCompetitor(input: {
+  platform: SocialPlatform;
+  name: string;
+  url?: string | null;
+  notes?: string | null;
+}): Promise<SocialCompetitor> {
+  await requireUser();
+  const last = await db
+    .select({ position: socialCompetitors.position })
+    .from(socialCompetitors)
+    .where(eq(socialCompetitors.platform, input.platform))
+    .orderBy(desc(socialCompetitors.position))
+    .limit(1);
+  const position = (last[0]?.position ?? -1) + 1;
+  const [row] = await db
+    .insert(socialCompetitors)
+    .values({
+      platform: input.platform,
+      name: input.name,
+      url: input.url ?? null,
+      notes: input.notes ?? null,
+      position,
+    })
+    .returning();
+  revalidatePath(`/socials/${input.platform}`);
+  return serializeSocialCompetitor(row);
+}
+
+export async function updateCompetitor(
+  id: string,
+  patch: { name?: string; url?: string | null; notes?: string | null },
+): Promise<SocialCompetitor> {
+  await requireUser();
+  const update: Record<string, unknown> = {};
+  if (patch.name !== undefined) update.name = patch.name;
+  if (patch.url !== undefined) update.url = patch.url;
+  if (patch.notes !== undefined) update.notes = patch.notes;
+  const [row] = await db
+    .update(socialCompetitors)
+    .set(update)
+    .where(eq(socialCompetitors.id, id))
+    .returning();
+  if (!row) throw new Error("Competitor not found");
+  revalidatePath(`/socials/${row.platform}`);
+  return serializeSocialCompetitor(row);
+}
+
+export async function deleteCompetitor(id: string): Promise<void> {
+  await requireUser();
+  const [row] = await db
+    .delete(socialCompetitors)
+    .where(eq(socialCompetitors.id, id))
+    .returning({ platform: socialCompetitors.platform });
+  if (row) revalidatePath(`/socials/${row.platform}`);
 }

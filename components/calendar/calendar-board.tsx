@@ -13,14 +13,28 @@ import {
   addMonths,
   subMonths,
 } from "date-fns";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { PostDrawer } from "@/components/socials/post-drawer";
 import { SOCIAL_STATUS_TINT, PLATFORMS, PLATFORM_COLOR } from "@/lib/constants";
+import {
+  createSocialPost,
+  updateSocialPost,
+  deleteSocialPost,
+} from "@/lib/actions/socials";
 import type { SocialPlatform, SocialPost } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { toast } from "@/components/ui/use-toast";
 
 interface CalendarBoardProps {
   posts: SocialPost[];
@@ -35,9 +49,20 @@ const PLATFORM_TAG: Record<SocialPlatform, string> = {
 
 const ALL = "__all__";
 
-export function CalendarBoard({ posts }: CalendarBoardProps) {
+export function CalendarBoard({ posts: initialPosts }: CalendarBoardProps) {
+  const router = useRouter();
+  const [posts, setPosts] = useState<SocialPost[]>(initialPosts);
   const [cursor, setCursor] = useState(new Date());
   const [filter, setFilter] = useState<SocialPlatform | typeof ALL>(ALL);
+
+  // Picker state for "+ New post"
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pendingDate, setPendingDate] = useState<Date | null>(null);
+
+  // Drawer state for editing/creating
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerPlatform, setDrawerPlatform] = useState<SocialPlatform>("instagram");
+  const [openPost, setOpenPost] = useState<Partial<SocialPost> | null>(null);
 
   const filtered = useMemo(
     () => (filter === ALL ? posts : posts.filter((p) => p.platform === filter)),
@@ -60,11 +85,96 @@ export function CalendarBoard({ posts }: CalendarBoardProps) {
 
   const weekdayHeaders = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+  const openPicker = (date: Date | null) => {
+    setPendingDate(date);
+    setPickerOpen(true);
+  };
+
+  const choosePlatform = (platform: SocialPlatform) => {
+    const date = pendingDate;
+    setPickerOpen(false);
+    setPendingDate(null);
+
+    let scheduled: string | null = null;
+    if (date) {
+      const d = new Date(date);
+      d.setHours(9, 0, 0, 0);
+      scheduled = d.toISOString();
+    }
+
+    setDrawerPlatform(platform);
+    setOpenPost({
+      platform,
+      title: "",
+      status: "idea",
+      scheduled_for: scheduled,
+    });
+    setDrawerOpen(true);
+  };
+
+  const openExisting = (post: SocialPost) => {
+    setDrawerPlatform(post.platform);
+    setOpenPost(post);
+    setDrawerOpen(true);
+  };
+
+  const persist = async (patch: Partial<SocialPost>) => {
+    const id = openPost?.id;
+    if (!id) {
+      try {
+        const created = await createSocialPost({
+          platform: drawerPlatform,
+          title: patch.title ?? openPost?.title ?? "Untitled post",
+          caption: patch.caption ?? openPost?.caption ?? null,
+          hook: patch.hook ?? openPost?.hook ?? null,
+          cta: patch.cta ?? openPost?.cta ?? null,
+          hashtags: patch.hashtags ?? openPost?.hashtags ?? null,
+          media_notes: patch.media_notes ?? openPost?.media_notes ?? null,
+          status: patch.status ?? openPost?.status ?? "idea",
+          scheduled_for: patch.scheduled_for ?? openPost?.scheduled_for ?? null,
+        });
+        setPosts((cur) => [...cur, created]);
+        setOpenPost(created);
+      } catch {
+        toast({ title: "Couldn't create post", variant: "destructive" });
+      }
+      return;
+    }
+
+    setPosts((cur) => cur.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+    setOpenPost((cur) => (cur ? { ...cur, ...patch } : cur));
+    try {
+      await updateSocialPost(id, patch);
+    } catch {
+      toast({ title: "Save failed", variant: "destructive" });
+      router.refresh();
+    }
+  };
+
+  const remove = async () => {
+    const id = openPost?.id;
+    if (!id) return;
+    const prev = posts;
+    setPosts((cur) => cur.filter((p) => p.id !== id));
+    try {
+      await deleteSocialPost(id);
+    } catch {
+      toast({ title: "Delete failed", variant: "destructive" });
+      setPosts(prev);
+    }
+  };
+
   return (
     <>
       <PageHeader
         title="Calendar"
-        description="Scheduled social posts across every platform. Edit a post by clicking it."
+        description="Scheduled posts across every platform. Click a day or use New post to add."
+        actions={
+          <Button onClick={() => openPicker(null)}>
+            <Plus size={16} strokeWidth={2} />
+            New post
+          </Button>
+        }
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -148,27 +258,39 @@ export function CalendarBoard({ posts }: CalendarBoardProps) {
               <div
                 key={key}
                 className={cn(
-                  "relative flex flex-col items-stretch gap-1 bg-white p-2 text-left min-h-[88px]",
+                  "group relative flex flex-col items-stretch gap-1 bg-white p-2 text-left min-h-[88px]",
                   !inMonth && "bg-app-bg/60 text-app-muted",
                 )}
               >
-                <span
-                  className={cn(
-                    "text-xs font-medium",
-                    isToday &&
-                      "inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#FF5B8A] text-white",
-                  )}
-                >
-                  {format(day, "d")}
-                </span>
+                <div className="flex items-center justify-between">
+                  <span
+                    className={cn(
+                      "text-xs font-medium",
+                      isToday &&
+                        "inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#FF5B8A] text-white",
+                    )}
+                  >
+                    {format(day, "d")}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openPicker(day);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 text-app-muted hover:text-app-ink transition-opacity duration-150"
+                    aria-label="Add post on this day"
+                  >
+                    <Plus size={12} strokeWidth={2} />
+                  </button>
+                </div>
                 <div className="flex flex-col gap-1">
                   {dayPosts.slice(0, 3).map((p) => {
                     const tint = SOCIAL_STATUS_TINT[p.status];
                     return (
-                      <Link
+                      <button
                         key={p.id}
-                        href={`/socials/${p.platform}`}
-                        className="flex items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] font-medium hover:opacity-90"
+                        onClick={() => openExisting(p)}
+                        className="flex items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] font-medium text-left hover:opacity-90"
                         style={{ backgroundColor: tint.bg, color: tint.text }}
                         title={`${p.platform}: ${p.title || "Untitled"}`}
                       >
@@ -179,13 +301,16 @@ export function CalendarBoard({ posts }: CalendarBoardProps) {
                           {PLATFORM_TAG[p.platform]}
                         </span>
                         <span className="truncate">{p.title || "Untitled"}</span>
-                      </Link>
+                      </button>
                     );
                   })}
                   {dayPosts.length > 3 && (
-                    <span className="text-[10px] text-app-muted">
+                    <Link
+                      href={`/socials/${dayPosts[0].platform}`}
+                      className="text-[10px] text-app-muted hover:underline"
+                    >
                       +{dayPosts.length - 3} more
-                    </span>
+                    </Link>
                   )}
                 </div>
               </div>
@@ -193,6 +318,47 @@ export function CalendarBoard({ posts }: CalendarBoardProps) {
           })}
         </div>
       </div>
+
+      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+        <DialogContent className="max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>
+              New post{pendingDate ? ` · ${format(pendingDate, "MMM d")}` : ""}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="px-6 pb-6">
+            <p className="text-sm text-app-muted mb-3">Pick a platform.</p>
+            <div className="grid grid-cols-2 gap-2">
+              {PLATFORMS.map((p) => (
+                <button
+                  key={p.value}
+                  onClick={() => choosePlatform(p.value)}
+                  className="flex items-center gap-2 rounded-lg border border-app-border bg-white px-3 py-2 text-sm hover:bg-app-hover transition-colors duration-150"
+                >
+                  <span
+                    className="inline-block h-3 w-3 rounded-full"
+                    style={{ backgroundColor: PLATFORM_COLOR[p.value] }}
+                  />
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <PostDrawer
+        open={drawerOpen}
+        onOpenChange={(o) => {
+          setDrawerOpen(o);
+          if (!o) setOpenPost(null);
+        }}
+        platform={drawerPlatform}
+        post={openPost}
+        links={[]}
+        onSave={persist}
+        onDelete={openPost?.id ? remove : undefined}
+      />
     </>
   );
 }

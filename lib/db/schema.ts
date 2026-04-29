@@ -145,6 +145,30 @@ export const socialLinks = pgTable(
   }),
 );
 
+export const socialChannels = pgTable("social_channels", {
+  platform: socialPlatformEnum("platform").primaryKey(),
+  driveUrl: text("drive_url"),
+  accountUrl: text("account_url"),
+  notes: text("notes"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
+export const socialCompetitors = pgTable(
+  "social_competitors",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    platform: socialPlatformEnum("platform").notNull(),
+    name: text("name").notNull(),
+    url: text("url"),
+    notes: text("notes"),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (t) => ({
+    platformIdx: index("social_competitors_platform_idx").on(t.platform),
+  }),
+);
+
 export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
 export type SocialPost = typeof socialPosts.$inferSelect;
@@ -155,3 +179,7 @@ export type IdeaLink = typeof ideaLinks.$inferSelect;
 export type NewIdeaLink = typeof ideaLinks.$inferInsert;
 export type SocialLink = typeof socialLinks.$inferSelect;
 export type NewSocialLink = typeof socialLinks.$inferInsert;
+export type SocialChannel = typeof socialChannels.$inferSelect;
+export type NewSocialChannel = typeof socialChannels.$inferInsert;
+export type SocialCompetitor = typeof socialCompetitors.$inferSelect;
+export type NewSocialCompetitor = typeof socialCompetitors.$inferInsert;

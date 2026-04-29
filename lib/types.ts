@@ -61,3 +61,21 @@ export interface SocialLink {
   label: string | null;
   created_at: string;
 }
+
+export interface SocialChannel {
+  platform: SocialPlatform;
+  drive_url: string | null;
+  account_url: string | null;
+  notes: string | null;
+  updated_at: string;
+}
+
+export interface SocialCompetitor {
+  id: string;
+  platform: SocialPlatform;
+  name: string;
+  url: string | null;
+  notes: string | null;
+  position: number;
+  created_at: string;
+}

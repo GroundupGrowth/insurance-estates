@@ -4,6 +4,8 @@ import type {
   Idea as IdeaRow,
   IdeaLink as IdeaLinkRow,
   SocialLink as SocialLinkRow,
+  SocialChannel as SocialChannelRow,
+  SocialCompetitor as SocialCompetitorRow,
 } from "./schema";
 import type {
   Task,
@@ -11,6 +13,8 @@ import type {
   Idea,
   IdeaLink,
   SocialLink,
+  SocialChannel,
+  SocialCompetitor,
   TaskStatus,
   TaskPriority,
   Assignee,
@@ -90,6 +94,28 @@ export function serializeSocialLink(row: SocialLinkRow): SocialLink {
     post_id: row.postId,
     url: row.url,
     label: row.label ?? null,
+    created_at: isoOrNow(row.createdAt),
+  };
+}
+
+export function serializeSocialChannel(row: SocialChannelRow): SocialChannel {
+  return {
+    platform: row.platform as SocialPlatform,
+    drive_url: row.driveUrl ?? null,
+    account_url: row.accountUrl ?? null,
+    notes: row.notes ?? null,
+    updated_at: isoOrNow(row.updatedAt),
+  };
+}
+
+export function serializeSocialCompetitor(row: SocialCompetitorRow): SocialCompetitor {
+  return {
+    id: row.id,
+    platform: row.platform as SocialPlatform,
+    name: row.name,
+    url: row.url ?? null,
+    notes: row.notes ?? null,
+    position: row.position,
     created_at: isoOrNow(row.createdAt),
   };
 }

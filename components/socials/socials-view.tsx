@@ -5,25 +5,40 @@ import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { SocialsTabs } from "./socials-tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ListView } from "./list-view";
 import { PostDrawer } from "./post-drawer";
+import { PlatformOverview } from "./platform-overview";
 import {
   createSocialPost,
   updateSocialPost,
   deleteSocialPost,
 } from "@/lib/actions/socials";
-import { PLATFORMS } from "@/lib/constants";
-import type { SocialPlatform, SocialPost, SocialLink } from "@/lib/types";
+import { PLATFORMS, PLATFORM_COLOR } from "@/lib/constants";
+import type {
+  SocialPlatform,
+  SocialPost,
+  SocialLink,
+  SocialChannel,
+  SocialCompetitor,
+} from "@/lib/types";
 import { toast } from "@/components/ui/use-toast";
 
 interface SocialsViewProps {
   platform: SocialPlatform;
   initialPosts: SocialPost[];
   initialLinks: SocialLink[];
+  initialChannel: SocialChannel | null;
+  initialCompetitors: SocialCompetitor[];
 }
 
-export function SocialsView({ platform, initialPosts, initialLinks }: SocialsViewProps) {
+export function SocialsView({
+  platform,
+  initialPosts,
+  initialLinks,
+  initialChannel,
+  initialCompetitors,
+}: SocialsViewProps) {
   const router = useRouter();
   const [posts, setPosts] = useState(initialPosts);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -95,19 +110,42 @@ export function SocialsView({ platform, initialPosts, initialLinks }: SocialsVie
   return (
     <>
       <PageHeader
-        title="Socials"
-        description={`Ideate and structure ${platformLabel} posts. Scheduling lives in Calendar.`}
+        title={
+          <span className="inline-flex items-center gap-2">
+            <span
+              className="inline-block h-3 w-3 rounded-full"
+              style={{ backgroundColor: PLATFORM_COLOR[platform] }}
+            />
+            {platformLabel}
+          </span>
+        }
+        description="Channel info, competitors, and the post idea board."
       />
 
-      <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <SocialsTabs />
-        <Button onClick={openNew}>
-          <Plus size={16} strokeWidth={2} />
-          New post
-        </Button>
-      </div>
+      <Tabs defaultValue="overview">
+        <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="ideas">Ideas</TabsTrigger>
+          </TabsList>
+          <Button onClick={openNew}>
+            <Plus size={16} strokeWidth={2} />
+            New post
+          </Button>
+        </div>
 
-      <ListView posts={posts} onOpen={openExisting} />
+        <TabsContent value="overview">
+          <PlatformOverview
+            platform={platform}
+            initialChannel={initialChannel}
+            initialCompetitors={initialCompetitors}
+          />
+        </TabsContent>
+
+        <TabsContent value="ideas">
+          <ListView posts={posts} onOpen={openExisting} />
+        </TabsContent>
+      </Tabs>
 
       <PostDrawer
         open={drawerOpen}
