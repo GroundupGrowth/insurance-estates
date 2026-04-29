@@ -1,11 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { projects } from "@/lib/db/schema";
+import {
+  projects,
+  tasks,
+  ideas,
+  socialPosts,
+  comments,
+  activity,
+} from "@/lib/db/schema";
 import { getCurrentUser } from "@/stack";
 import { serializeProject } from "@/lib/db/serializers";
+import { logActivity } from "@/lib/db/activity";
 import type { Project, ProjectStatus } from "@/lib/types";
 
 async function requireUser() {
@@ -46,7 +54,7 @@ export async function createProject(input: {
   notes?: string | null;
   status?: ProjectStatus;
 }): Promise<Project> {
-  await requireUser();
+  const user = await requireUser();
   const [row] = await db
     .insert(projects)
     .values({
@@ -60,24 +68,62 @@ export async function createProject(input: {
       status: input.status ?? "active",
     })
     .returning();
+  await logActivity({
+    parent_type: "project",
+    parent_id: row.id,
+    actor: user.primaryEmail,
+    action: "created",
+    meta: { name: row.name },
+  });
   revalidatePath("/projects");
   return serializeProject(row);
 }
 
 export async function updateProject(id: string, patch: ProjectPatch): Promise<Project> {
-  await requireUser();
+  const user = await requireUser();
+  const [before] = await db.select().from(projects).where(eq(projects.id, id)).limit(1);
   const [row] = await db
     .update(projects)
     .set(patchToColumns(patch))
     .where(eq(projects.id, id))
     .returning();
   if (!row) throw new Error("Project not found");
+
+  if (before && patch.status !== undefined && patch.status !== before.status) {
+    await logActivity({
+      parent_type: "project",
+      parent_id: id,
+      actor: user.primaryEmail,
+      action: "status_changed",
+      meta: { from: before.status, to: patch.status },
+    });
+  }
+  if (before && patch.owner !== undefined && patch.owner !== before.owner) {
+    await logActivity({
+      parent_type: "project",
+      parent_id: id,
+      actor: user.primaryEmail,
+      action: "owner_changed",
+      meta: { from: before.owner, to: patch.owner },
+    });
+  }
+
   revalidatePath("/projects");
+  revalidatePath(`/projects/${id}`);
   return serializeProject(row);
 }
 
 export async function deleteProject(id: string): Promise<void> {
   await requireUser();
+  // Detach any associated tasks/ideas/posts so they survive (but are unlinked).
+  await Promise.all([
+    db.update(tasks).set({ projectId: null }).where(eq(tasks.projectId, id)),
+    db.update(ideas).set({ projectId: null }).where(eq(ideas.projectId, id)),
+    db.update(socialPosts).set({ projectId: null }).where(eq(socialPosts.projectId, id)),
+  ]);
+  await db.delete(comments).where(and(eq(comments.parentType, "project"), eq(comments.parentId, id)));
+  await db.delete(activity).where(and(eq(activity.parentType, "project"), eq(activity.parentId, id)));
   await db.delete(projects).where(eq(projects.id, id));
   revalidatePath("/projects");
+  revalidatePath(`/projects/${id}`);
 }

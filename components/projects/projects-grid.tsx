@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { ExternalLink, Plus } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/ui/empty";
 import { ProjectDialog } from "./project-dialog";
-import { createProject, updateProject, deleteProject } from "@/lib/actions/projects";
+import { createProject } from "@/lib/actions/projects";
 import {
   ASSIGNEE_COLOR,
   PROJECT_STATUS_TINT,
@@ -32,61 +33,30 @@ const hostnameOf = (url: string) => {
 };
 
 export function ProjectsGrid({ initialProjects }: Props) {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [openProject, setOpenProject] = useState<Partial<Project> | null>(null);
 
   const openNew = () => {
-    setOpenProject(null);
-    setDialogOpen(true);
-  };
-
-  const openExisting = (p: Project) => {
-    setOpenProject(p);
     setDialogOpen(true);
   };
 
   const persist = async (patch: Partial<Project>) => {
-    const id = openProject?.id;
-    if (!id) {
-      try {
-        const created = await createProject({
-          name: patch.name ?? "Untitled project",
-          topic: patch.topic ?? null,
-          description: patch.description ?? null,
-          owner: patch.owner ?? null,
-          url: patch.url ?? null,
-          color: patch.color,
-          notes: patch.notes ?? null,
-          status: patch.status,
-        });
-        setProjects((cur) => [...cur, created]);
-        setOpenProject(created);
-      } catch {
-        toast({ title: "Couldn't create project", variant: "destructive" });
-      }
-      return;
-    }
-
-    setProjects((cur) => cur.map((p) => (p.id === id ? { ...p, ...patch } : p)));
-    setOpenProject((cur) => (cur ? { ...cur, ...patch } : cur));
     try {
-      await updateProject(id, patch);
+      const created = await createProject({
+        name: patch.name ?? "Untitled project",
+        topic: patch.topic ?? null,
+        description: patch.description ?? null,
+        owner: patch.owner ?? null,
+        url: patch.url ?? null,
+        color: patch.color,
+        notes: patch.notes ?? null,
+        status: patch.status,
+      });
+      setProjects((cur) => [...cur, created]);
+      router.push(`/projects/${created.id}`);
     } catch {
-      toast({ title: "Save failed", variant: "destructive" });
-    }
-  };
-
-  const remove = async () => {
-    const id = openProject?.id;
-    if (!id) return;
-    const prev = projects;
-    setProjects((cur) => cur.filter((p) => p.id !== id));
-    try {
-      await deleteProject(id);
-    } catch {
-      toast({ title: "Delete failed", variant: "destructive" });
-      setProjects(prev);
+      toast({ title: "Couldn't create project", variant: "destructive" });
     }
   };
 
@@ -120,8 +90,8 @@ export function ProjectsGrid({ initialProjects }: Props) {
             return (
               <article
                 key={p.id}
-                onClick={() => openExisting(p)}
-                className="cursor-pointer rounded-2xl border border-app-border bg-white p-6 transition-colors duration-150 hover:bg-app-hover"
+                onClick={() => router.push(`/projects/${p.id}`)}
+                className="cursor-pointer block rounded-2xl border border-app-border bg-white p-6 transition-colors duration-150 hover:bg-app-hover"
               >
                 <div className="flex items-center gap-4 mb-3">
                   <div
@@ -189,13 +159,9 @@ export function ProjectsGrid({ initialProjects }: Props) {
 
       <ProjectDialog
         open={dialogOpen}
-        onOpenChange={(o) => {
-          setDialogOpen(o);
-          if (!o) setOpenProject(null);
-        }}
-        project={openProject}
+        onOpenChange={setDialogOpen}
+        project={null}
         onSave={persist}
-        onDelete={openProject?.id ? remove : undefined}
       />
     </>
   );

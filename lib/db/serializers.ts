@@ -7,6 +7,8 @@ import type {
   SocialChannel as SocialChannelRow,
   SocialCompetitor as SocialCompetitorRow,
   Project as ProjectRow,
+  Comment as CommentRow,
+  Activity as ActivityRow,
 } from "./schema";
 import type {
   Task,
@@ -17,6 +19,9 @@ import type {
   SocialChannel,
   SocialCompetitor,
   Project,
+  Comment,
+  ActivityEvent,
+  ParentType,
   TaskStatus,
   TaskPriority,
   Assignee,
@@ -44,6 +49,7 @@ export function serializeTask(row: TaskRow): Task {
     status: row.status as TaskStatus,
     priority: (row.priority ?? null) as TaskPriority | null,
     assignee: (row.assignee ?? null) as Assignee | null,
+    project_id: row.projectId ?? null,
     due_date: row.dueDate ?? null,
     position: row.position,
     created_at: isoOrNow(row.createdAt),
@@ -64,6 +70,7 @@ export function serializeSocialPost(row: SocialPostRow): SocialPost {
     status: row.status as SocialStatus,
     scheduled_for: isoOrNull(row.scheduledFor),
     posted_at: isoOrNull(row.postedAt),
+    project_id: row.projectId ?? null,
     created_at: isoOrNow(row.createdAt),
     updated_at: isoOrNow(row.updatedAt),
   };
@@ -76,6 +83,7 @@ export function serializeIdea(row: IdeaRow): Idea {
     body: row.body ?? null,
     status: (row.status ?? "raw") as IdeaStatus,
     tags: row.tags ?? [],
+    project_id: row.projectId ?? null,
     created_at: isoOrNow(row.createdAt),
     updated_at: isoOrNow(row.updatedAt),
   };
@@ -137,5 +145,36 @@ export function serializeProject(row: ProjectRow): Project {
     position: row.position,
     created_at: isoOrNow(row.createdAt),
     updated_at: isoOrNow(row.updatedAt),
+  };
+}
+
+export function serializeComment(row: CommentRow): Comment {
+  return {
+    id: row.id,
+    parent_type: row.parentType as ParentType,
+    parent_id: row.parentId,
+    author: row.author ?? null,
+    body: row.body,
+    created_at: isoOrNow(row.createdAt),
+  };
+}
+
+export function serializeActivity(row: ActivityRow): ActivityEvent {
+  let meta: Record<string, unknown> | null = null;
+  if (row.meta) {
+    try {
+      meta = JSON.parse(row.meta) as Record<string, unknown>;
+    } catch {
+      meta = null;
+    }
+  }
+  return {
+    id: row.id,
+    parent_type: row.parentType as ParentType,
+    parent_id: row.parentId,
+    actor: row.actor ?? null,
+    action: row.action,
+    meta,
+    created_at: isoOrNow(row.createdAt),
   };
 }

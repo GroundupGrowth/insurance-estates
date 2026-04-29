@@ -21,19 +21,44 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TASK_COLUMNS, PRIORITY_OPTIONS, ASSIGNEE_OPTIONS } from "@/lib/constants";
-import type { Task, TaskPriority, TaskStatus, Assignee } from "@/lib/types";
+import type {
+  Task,
+  TaskPriority,
+  TaskStatus,
+  Assignee,
+  Project,
+  Comment,
+  ActivityEvent,
+} from "@/lib/types";
+import { ActivityThread } from "@/components/shared/activity-thread";
+import { fetchThread } from "@/lib/actions/comments";
 
 const UNASSIGNED = "__unassigned__";
+const NO_PROJECT = "__none__";
+
+interface ProjectOption {
+  id: string;
+  name: string;
+  color: string;
+}
 
 interface TaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   task: Partial<Task> | null;
+  projects: ProjectOption[];
   onSave: (patch: Partial<Task>) => Promise<void> | void;
   onDelete?: () => Promise<void> | void;
 }
 
-export function TaskDialog({ open, onOpenChange, task, onSave, onDelete }: TaskDialogProps) {
+export function TaskDialog({
+  open,
+  onOpenChange,
+  task,
+  projects,
+  onSave,
+  onDelete,
+}: TaskDialogProps) {
   const isNew = !task?.id;
 
   const [title, setTitle] = useState("");
@@ -41,9 +66,15 @@ export function TaskDialog({ open, onOpenChange, task, onSave, onDelete }: TaskD
   const [status, setStatus] = useState<TaskStatus>("todo");
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [assignee, setAssignee] = useState<Assignee | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(null);
   const [dueDate, setDueDate] = useState<string>("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [creating, setCreating] = useState(false);
+
+  const [thread, setThread] = useState<{
+    comments: Comment[];
+    activity: ActivityEvent[];
+  } | null>(null);
 
   useEffect(() => {
     if (task) {
@@ -52,11 +83,31 @@ export function TaskDialog({ open, onOpenChange, task, onSave, onDelete }: TaskD
       setStatus((task.status as TaskStatus) ?? "todo");
       setPriority((task.priority as TaskPriority) ?? "medium");
       setAssignee((task.assignee as Assignee | null) ?? null);
+      setProjectId(task.project_id ?? null);
       setDueDate(task.due_date ?? "");
       setConfirmDelete(false);
       setCreating(false);
     }
   }, [task]);
+
+  useEffect(() => {
+    if (!open || !task?.id) {
+      setThread(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const t = await fetchThread("task", task.id!);
+        if (!cancelled) setThread(t);
+      } catch {
+        if (!cancelled) setThread({ comments: [], activity: [] });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, task?.id]);
 
   const flush = (patch: Partial<Task>) => {
     if (isNew) return;
@@ -74,6 +125,7 @@ export function TaskDialog({ open, onOpenChange, task, onSave, onDelete }: TaskD
         status,
         priority,
         assignee,
+        project_id: projectId,
         due_date: dueDate || null,
       });
       onOpenChange(false);
@@ -201,20 +253,68 @@ export function TaskDialog({ open, onOpenChange, task, onSave, onDelete }: TaskD
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="task-due">Due date</Label>
-              <Input
-                id="task-due"
-                type="date"
-                value={dueDate ?? ""}
-                onChange={(e) => setDueDate(e.target.value)}
-                onBlur={() =>
-                  !isNew &&
-                  (dueDate || null) !== (task?.due_date ?? null) &&
-                  flush({ due_date: dueDate || null })
-                }
-              />
+              <Label>Project</Label>
+              <Select
+                value={projectId ?? NO_PROJECT}
+                onValueChange={(v) => {
+                  const next = v === NO_PROJECT ? null : v;
+                  setProjectId(next);
+                  flush({ project_id: next });
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_PROJECT}>No project</SelectItem>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      <span className="inline-flex items-center gap-2">
+                        <span
+                          className="inline-block h-2 w-2 rounded-full"
+                          style={{ backgroundColor: p.color }}
+                        />
+                        {p.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="task-due">Due date</Label>
+            <Input
+              id="task-due"
+              type="date"
+              value={dueDate ?? ""}
+              onChange={(e) => setDueDate(e.target.value)}
+              onBlur={() =>
+                !isNew &&
+                (dueDate || null) !== (task?.due_date ?? null) &&
+                flush({ due_date: dueDate || null })
+              }
+            />
+          </div>
+
+          {!isNew && task?.id && (
+            <div className="space-y-2 border-t border-app-border pt-5">
+              <Label className="text-xs uppercase tracking-wide text-app-muted">
+                Activity
+              </Label>
+              {thread ? (
+                <ActivityThread
+                  parentType="task"
+                  parentId={task.id}
+                  initialComments={thread.comments}
+                  initialActivity={thread.activity}
+                />
+              ) : (
+                <p className="text-xs text-app-muted">Loading…</p>
+              )}
+            </div>
+          )}
         </div>
 
         <DialogFooter>

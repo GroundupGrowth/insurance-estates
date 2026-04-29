@@ -100,6 +100,7 @@ CREATE TABLE IF NOT EXISTS "tasks" (
   "status"      "task_status" NOT NULL,
   "priority"    "task_priority" DEFAULT 'medium',
   "assignee"    text,
+  "project_id"  uuid,
   "due_date"    date,
   "position"    integer DEFAULT 0 NOT NULL,
   "created_at"  timestamp with time zone DEFAULT now(),
@@ -107,7 +108,29 @@ CREATE TABLE IF NOT EXISTS "tasks" (
 );
 
 -- Columns added after initial setup (safe to re-run).
-ALTER TABLE "tasks" ADD COLUMN IF NOT EXISTS "assignee" text;
+ALTER TABLE "tasks"         ADD COLUMN IF NOT EXISTS "assignee"   text;
+ALTER TABLE "tasks"         ADD COLUMN IF NOT EXISTS "project_id" uuid;
+ALTER TABLE "ideas"         ADD COLUMN IF NOT EXISTS "project_id" uuid;
+ALTER TABLE "social_posts"  ADD COLUMN IF NOT EXISTS "project_id" uuid;
+
+CREATE TABLE IF NOT EXISTS "comments" (
+  "id"          uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+  "parent_type" text NOT NULL,
+  "parent_id"   uuid NOT NULL,
+  "author"      text,
+  "body"        text NOT NULL,
+  "created_at"  timestamp with time zone DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS "activity" (
+  "id"          uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+  "parent_type" text NOT NULL,
+  "parent_id"   uuid NOT NULL,
+  "actor"       text,
+  "action"      text NOT NULL,
+  "meta"        text,
+  "created_at"  timestamp with time zone DEFAULT now()
+);
 
 -- Foreign keys -------------------------------------------------
 DO $$ BEGIN
@@ -129,6 +152,11 @@ CREATE INDEX IF NOT EXISTS "idea_links_idea_id_idx"            ON "idea_links"  
 CREATE INDEX IF NOT EXISTS "social_links_post_id_idx"          ON "social_links" USING btree ("post_id");
 CREATE INDEX IF NOT EXISTS "social_competitors_platform_idx"   ON "social_competitors" USING btree ("platform");
 CREATE INDEX IF NOT EXISTS "projects_status_idx"               ON "projects"      USING btree ("status");
+CREATE INDEX IF NOT EXISTS "tasks_project_id_idx"              ON "tasks"         USING btree ("project_id");
+CREATE INDEX IF NOT EXISTS "ideas_project_id_idx"              ON "ideas"         USING btree ("project_id");
+CREATE INDEX IF NOT EXISTS "social_posts_project_id_idx"       ON "social_posts"  USING btree ("project_id");
+CREATE INDEX IF NOT EXISTS "comments_parent_idx"               ON "comments"      USING btree ("parent_type","parent_id");
+CREATE INDEX IF NOT EXISTS "activity_parent_idx"               ON "activity"      USING btree ("parent_type","parent_id");
 CREATE INDEX IF NOT EXISTS "ideas_updated_at_idx"              ON "ideas"        USING btree ("updated_at");
 CREATE INDEX IF NOT EXISTS "social_posts_platform_status_idx"  ON "social_posts" USING btree ("platform","status");
 CREATE INDEX IF NOT EXISTS "social_posts_scheduled_for_idx"    ON "social_posts" USING btree ("scheduled_for");

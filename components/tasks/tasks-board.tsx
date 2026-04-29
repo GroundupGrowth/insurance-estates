@@ -35,9 +35,10 @@ const isStatus = (id: string): id is TaskStatus =>
 interface BoardProps {
   initialTasks: Task[];
   initialFilter?: string | null;
+  projects: { id: string; name: string; color: string }[];
 }
 
-export function TasksBoard({ initialTasks, initialFilter }: BoardProps) {
+export function TasksBoard({ initialTasks, initialFilter, projects }: BoardProps) {
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [openTask, setOpenTask] = useState<Partial<Task> | null>(null);
@@ -88,6 +89,8 @@ export function TasksBoard({ initialTasks, initialFilter }: BoardProps) {
           description: patch.description ?? openTask?.description ?? null,
           status,
           priority: (patch.priority ?? openTask?.priority ?? "medium") ?? "medium",
+          assignee: patch.assignee ?? openTask?.assignee ?? null,
+          project_id: patch.project_id ?? openTask?.project_id ?? null,
           due_date: patch.due_date ?? openTask?.due_date ?? null,
         });
         setTasks((cur) => [...cur, created]);
@@ -270,6 +273,7 @@ export function TasksBoard({ initialTasks, initialFilter }: BoardProps) {
           if (!o) setOpenTask(null);
         }}
         task={openTask}
+        projects={projects}
         onSave={persistTask}
         onDelete={openTask?.id ? deleteTask : undefined}
       />

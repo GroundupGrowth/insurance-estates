@@ -15,6 +15,7 @@ export interface Task {
   status: TaskStatus;
   priority: TaskPriority | null;
   assignee: Assignee | null;
+  project_id: string | null;
   due_date: string | null;
   position: number;
   created_at: string;
@@ -33,6 +34,7 @@ export interface SocialPost {
   status: SocialStatus;
   scheduled_for: string | null;
   posted_at: string | null;
+  project_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -43,6 +45,7 @@ export interface Idea {
   body: string | null;
   status: IdeaStatus;
   tags: string[];
+  project_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -94,4 +97,25 @@ export interface Project {
   position: number;
   created_at: string;
   updated_at: string;
+}
+
+export type ParentType = "task" | "project" | "idea" | "social_post";
+
+export interface Comment {
+  id: string;
+  parent_type: ParentType;
+  parent_id: string;
+  author: string | null;
+  body: string;
+  created_at: string;
+}
+
+export interface ActivityEvent {
+  id: string;
+  parent_type: ParentType;
+  parent_id: string;
+  actor: string | null;
+  action: string;
+  meta: Record<string, unknown> | null;
+  created_at: string;
 }

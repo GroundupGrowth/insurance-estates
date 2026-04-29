@@ -66,6 +66,7 @@ export const tasks = pgTable(
     status: taskStatusEnum("status").notNull(),
     priority: taskPriorityEnum("priority").default("medium"),
     assignee: text("assignee"),
+    projectId: uuid("project_id"),
     dueDate: date("due_date"),
     position: integer("position").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
@@ -74,6 +75,7 @@ export const tasks = pgTable(
   (t) => ({
     statusPositionIdx: index("tasks_status_position_idx").on(t.status, t.position),
     dueDateIdx: index("tasks_due_date_idx").on(t.dueDate),
+    projectIdIdx: index("tasks_project_id_idx").on(t.projectId),
   }),
 );
 
@@ -91,12 +93,14 @@ export const socialPosts = pgTable(
     status: socialStatusEnum("status").notNull().default("idea"),
     scheduledFor: timestamp("scheduled_for", { withTimezone: true }),
     postedAt: timestamp("posted_at", { withTimezone: true }),
+    projectId: uuid("project_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   },
   (t) => ({
     platformStatusIdx: index("social_posts_platform_status_idx").on(t.platform, t.status),
     scheduledForIdx: index("social_posts_scheduled_for_idx").on(t.scheduledFor),
+    projectIdIdx: index("social_posts_project_id_idx").on(t.projectId),
   }),
 );
 
@@ -111,11 +115,13 @@ export const ideas = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    projectId: uuid("project_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   },
   (t) => ({
     updatedAtIdx: index("ideas_updated_at_idx").on(t.updatedAt),
+    projectIdIdx: index("ideas_project_id_idx").on(t.projectId),
   }),
 );
 
@@ -210,5 +216,40 @@ export type SocialChannel = typeof socialChannels.$inferSelect;
 export type NewSocialChannel = typeof socialChannels.$inferInsert;
 export type SocialCompetitor = typeof socialCompetitors.$inferSelect;
 export type NewSocialCompetitor = typeof socialCompetitors.$inferInsert;
+export const comments = pgTable(
+  "comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    parentType: text("parent_type").notNull(),
+    parentId: uuid("parent_id").notNull(),
+    author: text("author"),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (t) => ({
+    parentIdx: index("comments_parent_idx").on(t.parentType, t.parentId),
+  }),
+);
+
+export const activity = pgTable(
+  "activity",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    parentType: text("parent_type").notNull(),
+    parentId: uuid("parent_id").notNull(),
+    actor: text("actor"),
+    action: text("action").notNull(),
+    meta: text("meta"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (t) => ({
+    parentIdx: index("activity_parent_idx").on(t.parentType, t.parentId),
+  }),
+);
+
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
+export type Comment = typeof comments.$inferSelect;
+export type NewComment = typeof comments.$inferInsert;
+export type Activity = typeof activity.$inferSelect;
+export type NewActivity = typeof activity.$inferInsert;
